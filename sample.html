@@ -5,16 +5,100 @@
 <meta http-equiv="Content-Script-Type" content="text/javascript">
 <script type="text/javascript"
 	src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
-<script type="text/javascript" src="raphael-min.js"></script>
-<script type="text/javascript" src="util.js"></script>
-<script type="text/javascript" src="parser.js"></script>
-<script type="text/javascript" src="renderer.js"></script>
-<script type="text/javascript" src="client.js"></script>
-<script type="text/javascript" src="task.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.4/raphael-min.js"></script>
+<script type="text/javascript" src="fumen.js"></script>
+<style type="text/css">
 
+</style>
+<script type="text/javascript">
+var dpi = 96; // dot/inch
+var A4_width_mm = 210; 
+var A4_height_mm = 297;
+var mm_inch = 25.4; // mm/inch
+var paper_width = dpi * A4_width_mm / mm_inch;
+var paper_height = dpi * A4_height_mm / mm_inch;
+
+function Generate()
+{
+	var code = $("#score_code").val();
+	var g_async_mode = false;
+	var showProgress = null;
+
+	var p = new Parser(function(msg){ console.log(msg); });
+	if(g_async_mode){
+		try{
+			var track = p.parse(code);
+			clearPapers(canvas);
+			var task = render(canvas, paper_width, paper_height, track, showProgress);
+		}catch(e){
+			console.log("Exception catched : " + e);
+			alert(e);
+			throw e;
+			return;
+		}
+
+		task.then(function(r){
+			
+		});
+	}else{
+		console.log("Rendering ... ");
+		setTimeout(function(){
+			try{
+				var track = p.parse(code);
+				clearPapers(canvas);
+				var task = render(canvas, paper_width, paper_height, track, showProgress);
+			}catch(e){
+				console.log("Exception catched : " + e);
+				alert(e);
+				throw e;
+				return;
+			}
+		}, 100); // Invoke later
+	}
+}
+
+function GenerateSetList()
+{
+	$("#canvas").css({"display":"table-cell", "text-align":"center", "opacity":0.0}); // display it
+	$("#canvas").click(function(){
+		$(this).css({"display":"none"});
+	});
+	
+	$("#loading").css({"display":"table-cell"});
+	showProgress("Rendering setlist ...");
+	
+	var scores = [];
+	var ch = $("#setlist_scores").children("div");
+	console.log(ch);
+	for(var i = 0; i < ch.length; ++i){
+		scores.push($(ch[i]).attr("sid"));
+	}
+	
+	load_multiple_codes(scores, function(codes){
+		
+		var task = null; 
+		clearPapers(canvas);
+		for(var i = 0; i < codes.length; ++i){
+			var p = new Parser();
+			var track = p.parse(codes[i][1]);
+			task = render(canvas, paper_width, paper_height, track, showProgress);
+		}
+		if(g_async_mode){
+			task.then(function(r){ // Wait for last task done
+				$("#loading").css({"display":"none"});
+			});
+		}else{
+			$("#loading").css({"display":"none"});
+		}
+		$("#canvas").css({"opacity":1.0});
+		
+	});
+}
+
+</script>
 <body>
-						<textarea id="score_code"
-							style="height: 600px; padding-left: 45px; border-radius: 0px;">
+<div>
+<textarea id="score_code" style="width:100%; height: 600px; ">
 %TITLE="Sample Piece"
 %ARTIST="Some artists"
 
@@ -48,5 +132,13 @@
 | C#7,13    | Bbm  | C#/G#  |
 | D    | E/B   |       | F#   |      | DM7   |
 </textarea>
-</BODY>
-</HTML>
+</div>
+<hr/>
+<button onClick="Generate()">Render</button>
+<hr/>
+<div style="background-color:gray; padding:10px;">
+<div id="canvas"></div>
+</div>
+<div id="invisible_view" style="opacity: 0;"></div>
+</body>
+</html>

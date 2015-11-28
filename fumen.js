@@ -2592,8 +2592,18 @@ function getMacros(global_macros, rg)
 	return macros_to_apply;
 }
 
+$(document).ready(function(){
+	/**
+	 * Load all of the web-fonts in-advance.
+	 * BBox size of 1st rendered web-font is different from that of rendered second and after.
+	 * Is this a bug of browser ? 
+	 */
+	paper = Raphael($("#invisible_view")[0],500,500);
+	var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt","icomoon");
+});
+
 function render_impl(canvas, track, just_to_estimate_size, param, async_mode, progress_cb)
-{	
+{
 	var draw = !just_to_estimate_size;
 	
 	console.log("render_impl called with " + draw);

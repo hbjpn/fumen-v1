@@ -17,8 +17,6 @@ var pages = new Array();
 
 var RENDERING_RULE_BOUNDARY = new Array();
 
-var g_async_mode = false;
-
 //
 // Utility Functions
 //
@@ -128,6 +126,191 @@ var inherits = function inherits(sub, sup) {
     F.prototype = sup.prototype;
     sub.prototype = new F();
     sub.prototype.constructor = sub;
+};
+
+function shallowcopy(obj)
+{
+	return jQuery.extend({}, obj);
+}
+
+function deepcopy(obj)
+{
+	return jQuery.extend(true, {}, obj);
+}
+
+//
+// Task and Task queue class
+//
+var the_task_queue = new TaskQueue();
+
+function TaskQueue()
+{
+	this.task_queue = {};
+}
+
+TaskQueue.prototype.enqueue = function(task)
+{
+	if(task.task_type !== null){
+		// All the tasks with same task type are serialized
+		// Tasks are queued
+		if(! (task.task_type in this.task_queue) )
+			this.task_queue[task.task_type] = [];
+		this.task_queue[task.task_type].push(task);
+		console.log("Enqueue task for queue '" + task.task_type + "'. Size = " + this.task_queue[task.task_type].length);
+		if(this.task_queue[task.task_type].length == 1){
+			setTimeout(task.run.bind(task), 0);
+		}
+	}else{
+		setTimeout(task.run.bind(task),0); // Just run it immediately if task type is null
+	}
+};
+
+TaskQueue.prototype.finish = function(task)
+{
+	// Finish notification from task
+	if(task.task_type === null)
+		return;
+	
+	if((!(task.task_type in this.task_queue)) ||
+	   (this.task_queue[task.task_type].length == 0) || 
+	   (this.task_queue[task.task_type][0] != task)){
+		alert("Invalid task execution state detected");
+	}else{
+		var q = this.task_queue[task.task_type];
+		q.shift();
+		console.log("Dequeue task for queue '" + task.task_type + "'. Size = " + q.length);
+		if(q.length > 0){
+			// TODO : Set timer for next task run ?
+			q[0].run();
+		}
+	}
+};
+
+/**
+ *
+ * @param call_back Callback function called when task is finished with context.
+ * @param interval Interval of call worker function in msec.
+ * @param task_type Task type. Any value can be specified. All the tasks which has the same task type(other than null)
+ *                  will be serialized.
+ * @param context Argument to worker function.
+ * @param worker Worker function. worker function is called with context.
+ *               Worker function can return followings
+ *               Task : Returned new task is executed asynchronously
+ *               Promise : 
+ *               Other : Returned value is handled to the callback function specified as a parameter of Task.then().
+ *
+ * @param queue Optional queue to use. If queue is not specified or null, global queue is used.
+ * @todo How to make child task in worker function ??
+ */
+function Task(context, worker, task_type, queue)
+{
+	if(task_type === undefined)
+		task_type = null;
+	
+	this.task_type = task_type;
+	this.context = context;
+	this.worker = worker;
+	
+	this.promise = null;
+	this.resolve = null;
+	this.reject  = null;
+	
+	
+	var me = this;
+	// TODO : Promise.defer may be better, but chrome does not support it yet.
+	this.promise = new Promise(function(resolve, reject){
+		me.resolve = resolve;
+		me.reject = reject;
+	});
+	
+	queue = queue === undefined ? null : queue;
+	this.queue = (queue ? queue : the_task_queue);
+	this.queue.enqueue(this);
+}
+
+
+Task.prototype.then = function(func){
+	return this.promise.then(func);
+};
+
+
+Task.prototype.run = function(){
+	
+	var ret = this.worker(this.context);
+	
+	if( (ret instanceof Task) || (ret instanceof Promise)){
+		// Asynchronous execution of worker
+		var me = this;
+		ret.then(function(taskret){
+			// End of task
+			// false, 0, true, ... all the values other than Task and undefined is land in here.
+			// ret is treated as a parameter for resolve
+			if(me.resolve === null){ alert("Invalid state detected"); }
+			me.resolve(taskret);
+			// Note that resolve will invoke then "later".
+			// finish notification will invoke a next task.
+			// It is required to wait a 1msec to keep order of the "then" and next task call.
+			setTimeout(me.queue.finish.bind(me.queue, me), 1);
+		});	
+	}else{
+		// End of task
+		// false, 0, true, ... all the values other than Task and undefined is land in here.
+		// ret is treated as a parameter for resolve
+		if(this.resolve === null){ alert("Invalid state detected"); }
+		this.resolve(ret);
+		// Note that resolve will invoke then "later".
+		// finish notification will invoke a next task.
+		// It is required to wait a 1msec to keep order of the "then" and next task call.
+		setTimeout(this.queue.finish.bind(this.queue, this), 1);
+	}
+};
+
+/**
+ * Enqueue function call. 
+ * @param func  Function to call
+ * @param arguments Arguments to func as array. arguments are applied to func with "apply" function.
+ * @param task_type Queue indentifer
+ * @returns {Task}
+ */
+Task.enqueueFunctionCall = function(func, arguments, task_type)
+{
+	return new Task({func:func, arguments:arguments, i:0, func_ret:undefined}, function(ctx){
+		if(ctx.i > 0)
+			return true; // Waste function's result : TODO : Handle function result to then
+		ret = ctx.func.apply(null, ctx.arguments); 
+		ctx.func_ret = ret;
+		if(ret===undefined) ret = true; // Force to exit 1 time even if the function returns undefined.
+		++ctx.i;
+		return ret; 
+	}, task_type); // Make one shot task
+};
+
+Task._ForeachWorker = function(wc)
+{
+	// Temporal queue to serialize following 2 tasks
+	var tempqueue = new TaskQueue();
+	new Task(wc, function(wc2){
+		return wc2.worker(wc2.loopindex, wc2.looptarget.length, wc2.looptarget[wc2.loopindex],wc2.context);
+	}, 0, tempqueue);
+	var task = new Task(wc, function(wc2){
+		if(wc2.loopindex == wc2.looptarget.length - 1){ return wc2.context; }		
+		var newwc = shallowcopy(wc2);
+		newwc.loopindex++;
+		return new Task(newwc, Task._ForeachWorker, null);
+	}, 0, tempqueue);
+	return task;
+};
+
+Task.Foreach = function(looptarget, worker, context, task_type)
+{
+	var wcontext = {};
+	wcontext.worker = worker;
+	wcontext.context = context;
+	wcontext.looptarget = looptarget;
+	wcontext.loopindex = 0;
+	var task = new Task(wcontext, Task._ForeachWorker, task_type);
+
+	return task;
 };
 
 //
@@ -1131,7 +1314,7 @@ Parser.prototype.parse = function(s)
 //
 // Rendering Engine
 //
-function render(canvas, paper_width, paper_height, track, progress_cb)
+function render(canvas, paper_width, paper_height, track, async_mode, progress_cb)
 {
 	var param = {
 		row_interval : 70,
@@ -1152,17 +1335,17 @@ function render(canvas, paper_width, paper_height, track, progress_cb)
 		repeat_mark_font : {'font-family':'Times New Roman','font-style':'italic','font-weight':'bold'},
 	};
 	
-	if(g_async_mode){
+	if(async_mode){
 		clearPapers(canvas);
-		Task.enqueueFunctionCall(render_impl, [canvas, track, true, param, progress_cb], "render");
+		Task.enqueueFunctionCall(render_impl, [canvas, track, true, param, async_mode, progress_cb], "render");
 		Task.enqueueFunctionCall(identify_scaling, [track, param], "render");
-		var task = Task.enqueueFunctionCall(render_impl, [canvas, track, false, param, progress_cb], "render");
+		var task = Task.enqueueFunctionCall(render_impl, [canvas, track, false, param, async_mode, progress_cb], "render");
 		return task;
 	}else{
-		render_impl(canvas, track, true, param, progress_cb);
+		render_impl(canvas, track, true, param, async_mode, progress_cb);
 		// Esiate scaling factor
 		identify_scaling(track, param);
-		render_impl(canvas, track, false, param, progress_cb);
+		render_impl(canvas, track, false, param, async_mode, progress_cb);
 	}
 }
 
@@ -2409,7 +2592,7 @@ function getMacros(global_macros, rg)
 	return macros_to_apply;
 }
 
-function render_impl(canvas, track, just_to_estimate_size, param, progress_cb)
+function render_impl(canvas, track, just_to_estimate_size, param, async_mode, progress_cb)
 {	
 	var draw = !just_to_estimate_size;
 	
@@ -2544,7 +2727,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, progress_cb)
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Invoke async loop execution");
 	
-	if(g_async_mode){
+	if(async_mode){
 		Task.Foreach(pageslist, function(pageidx, len, page, ctx1){
 			
 			Task.Foreach(page, function(pei,yselen, yse, ctx2){

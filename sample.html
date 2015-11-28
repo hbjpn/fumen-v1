@@ -19,15 +19,15 @@ var paper_height = dpi * A4_height_mm / mm_inch;
 function Generate()
 {
 	var code = $("#score_code").val();
-	var g_async_mode = false;
-	var showProgress = null;
-
+	var async_mode = $('input[name="blocking"]:checked').val() == "non-blocking";
+	var showProgress = false;
+	
 	var p = new Parser(function(msg){ console.log(msg); });
-	if(g_async_mode){
+	if(async_mode){
 		try{
 			var track = p.parse(code);
 			clearPapers(canvas);
-			var task = render(canvas, paper_width, paper_height, track, showProgress);
+			var task = render(canvas, paper_width, paper_height, track, async_mode, showProgress);
 		}catch(e){
 			console.log("Exception catched : " + e);
 			alert(e);
@@ -44,7 +44,7 @@ function Generate()
 			try{
 				var track = p.parse(code);
 				clearPapers(canvas);
-				var task = render(canvas, paper_width, paper_height, track, showProgress);
+				var task = render(canvas, paper_width, paper_height, track, async_mode, showProgress);
 			}catch(e){
 				console.log("Exception catched : " + e);
 				alert(e);
@@ -132,6 +132,8 @@ function GenerateSetList()
 </textarea>
 </div>
 <hr/>
+<input type="radio" name="blocking" value="blocking" checked="checked">Blocking</input>
+<input type="radio" name="blocking" value="non-blocking">Non-Blocking</input>
 <button onClick="Generate()">Render</button>
 <hr/>
 <div style="background-color:gray; padding:10px;">

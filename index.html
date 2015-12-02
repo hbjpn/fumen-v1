@@ -8,6 +8,13 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.4/raphael-min.js"></script>
 <script type="text/javascript" src="fumen.js"></script>
 <link rel="stylesheet" href="fumen_font.css">
+<style type="text/css">
+@media print{
+	#form {
+		display: none;
+	}
+}
+</style>
 <script type="text/javascript">
 var dpi = 96; // dot/inch
 var A4_width_mm = 210; 
@@ -95,8 +102,8 @@ function GenerateSetList()
 
 </script>
 <body>
-<div>
-<textarea id="score_code" style="width:100%; height: 600px; ">
+<div id="form">
+<textarea id="score_code" style="width:100%; height:400px; ">
 %TITLE="Sample Piece"
 %ARTIST="Some artists"
 
@@ -130,12 +137,12 @@ function GenerateSetList()
 | C#13    | Bbm  | C#/G#  |
 | D    | E/B   |       | F#   |      | DM7   |
 </textarea>
-</div>
 <hr/>
 <input type="radio" name="blocking" value="blocking" checked="checked">Blocking</input>
 <input type="radio" name="blocking" value="non-blocking">Non-Blocking</input>
 <button onClick="Generate()">Render</button>
 <hr/>
+</div>
 <div style="background-color:gray; padding:10px;">
 <div id="canvas"></div>
 </div>

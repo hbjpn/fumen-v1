@@ -18,7 +18,7 @@ var task = render($("canvas"), paper_width, paper_height, track, false, null);
 ```
 
 ## Samples
-* <index.html> is a good sample of fumen.
+* [index.html](index.html) might be a good sample of fumen !
 
 ## Sites
 * [Fumen Github Pages](http://hbjpn.github.io/fumen/) - Manual page of fumen

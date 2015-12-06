@@ -8,13 +8,16 @@ Chord and Rythm score rendering engine
 ## Getting started
 ```javascript
 // Make a parser object. 
-var p = new Parser();
+var p = new Fumen.Parser();
 
 / Parse fumen markdown texts
 var track = p.parse(code);
 
-// Render it to `div` area of id="canvas" !
-var task = render($("canvas"), paper_width, paper_height, track, false, null);
+// Maker a renderer object.
+var renderer = new Fumen.Renderer($("#canvas", paper_width, paper_height);
+
+// Render it !
+var task = renderer.render(track, false, null);
 ```
 
 ## Samples

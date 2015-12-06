@@ -14,7 +14,7 @@ var p = new Fumen.Parser();
 var track = p.parse(code);
 
 // Maker a renderer object.
-var renderer = new Fumen.Renderer($("#canvas", paper_width, paper_height);
+var renderer = new Fumen.Renderer($("#canvas"), paper_width, paper_height);
 
 // Render it !
 var task = renderer.render(track, false, null);

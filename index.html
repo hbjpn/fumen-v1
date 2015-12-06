@@ -33,7 +33,7 @@ function Generate()
 	if(async_mode){
 		try{
 			var track = p.parse(code);
-			var renderer = new Fumen.Renderer(canvas, paper_width, paper_height);
+			var renderer = new Fumen.Renderer($("#scorecanvas"), paper_width, paper_height);
 			renderer.clear();
 			var task = renderer.render(track, async_mode, showProgress);
 		}catch(e){
@@ -51,7 +51,7 @@ function Generate()
 		setTimeout(function(){
 			try{
 				var track = p.parse(code);
-				var renderer = new Fumen.Renderer(canvas, paper_width, paper_height);
+				var renderer = new Fumen.Renderer($("#scorecanvas"), paper_width, paper_height);
 				renderer.clear();
 				var task = renderer.render(track, async_mode, showProgress);
 			}catch(e){
@@ -62,44 +62,6 @@ function Generate()
 			}
 		}, 100); // Invoke later
 	}
-}
-
-function GenerateSetList()
-{
-	$("#canvas").css({"display":"table-cell", "text-align":"center", "opacity":0.0}); // display it
-	$("#canvas").click(function(){
-		$(this).css({"display":"none"});
-	});
-	
-	$("#loading").css({"display":"table-cell"});
-	showProgress("Rendering setlist ...");
-	
-	var scores = [];
-	var ch = $("#setlist_scores").children("div");
-	console.log(ch);
-	for(var i = 0; i < ch.length; ++i){
-		scores.push($(ch[i]).attr("sid"));
-	}
-	
-	load_multiple_codes(scores, function(codes){
-		
-		var task = null; 
-		clearPapers(canvas);
-		for(var i = 0; i < codes.length; ++i){
-			var p = new Parser();
-			var track = p.parse(codes[i][1]);
-			task = render(canvas, paper_width, paper_height, track, showProgress);
-		}
-		if(g_async_mode){
-			task.then(function(r){ // Wait for last task done
-				$("#loading").css({"display":"none"});
-			});
-		}else{
-			$("#loading").css({"display":"none"});
-		}
-		$("#canvas").css({"opacity":1.0});
-		
-	});
 }
 
 </script>
@@ -146,7 +108,7 @@ function GenerateSetList()
 <hr/>
 </div>
 <div style="background-color:gray; padding:10px;">
-<div id="canvas"></div>
+<div id="scorecanvas"></div>
 </div>
 <div id="invisible_view" style="opacity: 0;"></div>
 </body>

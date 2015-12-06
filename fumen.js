@@ -1343,15 +1343,15 @@ function Renderer(canvas, paper_width, paper_height)
 Renderer.prototype.render = function(track, async_mode, progress_cb)
 {	
 	if(async_mode){
-		Task.enqueueFunctionCall(render_impl, [canvas, track, true, this.param, async_mode, progress_cb], "render");
+		Task.enqueueFunctionCall(render_impl, [this.canvas, track, true, this.param, async_mode, progress_cb], "render");
 		Task.enqueueFunctionCall(identify_scaling, [track, this.param], "render");
-		var task = Task.enqueueFunctionCall(render_impl, [canvas, track, false, this.param, async_mode, progress_cb], "render");
+		var task = Task.enqueueFunctionCall(render_impl, [this.canvas, track, false, this.param, async_mode, progress_cb], "render");
 		return task;
 	}else{
-		render_impl(canvas, track, true, this.param, async_mode, progress_cb);
+		render_impl(this.canvas, track, true, this.param, async_mode, progress_cb);
 		// Esiate scaling factor
 		identify_scaling(track, this.param);
-		render_impl(canvas, track, false, this.param, async_mode, progress_cb);
+		render_impl(this.canvas, track, false, this.param, async_mode, progress_cb);
 	}
 }
 

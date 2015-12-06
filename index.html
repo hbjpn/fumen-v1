@@ -29,12 +29,13 @@ function Generate()
 	var async_mode = $('input[name="blocking"]:checked').val() == "non-blocking";
 	var showProgress = false;
 	
-	var p = new Parser(function(msg){ console.log(msg); });
+	var p = new Fumen.Parser(function(msg){ console.log(msg); });
 	if(async_mode){
 		try{
 			var track = p.parse(code);
-			clearPapers(canvas);
-			var task = render(canvas, paper_width, paper_height, track, async_mode, showProgress);
+			var renderer = new Fumen.Renderer(canvas, paper_width, paper_height);
+			renderer.clear();
+			var task = renderer.render(track, async_mode, showProgress);
 		}catch(e){
 			console.log("Exception catched : " + e);
 			alert(e);
@@ -50,8 +51,9 @@ function Generate()
 		setTimeout(function(){
 			try{
 				var track = p.parse(code);
-				clearPapers(canvas);
-				var task = render(canvas, paper_width, paper_height, track, async_mode, showProgress);
+				var renderer = new Fumen.Renderer(canvas, paper_width, paper_height);
+				renderer.clear();
+				var task = renderer.render(track, async_mode, showProgress);
 			}catch(e){
 				console.log("Exception catched : " + e);
 				alert(e);

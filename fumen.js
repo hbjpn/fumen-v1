@@ -13,6 +13,8 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+var Fumen = (function(){
+
 var pages = new Array();
 
 var RENDERING_RULE_BOUNDARY = new Array();
@@ -1314,9 +1316,11 @@ Parser.prototype.parse = function(s)
 //
 // Rendering Engine
 //
-function render(canvas, paper_width, paper_height, track, async_mode, progress_cb)
+
+function Renderer(canvas, paper_width, paper_height)
 {
-	var param = {
+	this.canvas = canvas;
+	this.param = {
 		row_interval : 70,
 		y_title_offset : 50,
 		y_author_offset : 90,
@@ -1334,18 +1338,20 @@ function render(canvas, paper_width, paper_height, track, async_mode, progress_c
 		paper_height : paper_height,
 		repeat_mark_font : {'font-family':'Times New Roman','font-style':'italic','font-weight':'bold'},
 	};
-	
+}
+
+Renderer.prototype.render = function(track, async_mode, progress_cb)
+{	
 	if(async_mode){
-		clearPapers(canvas);
-		Task.enqueueFunctionCall(render_impl, [canvas, track, true, param, async_mode, progress_cb], "render");
-		Task.enqueueFunctionCall(identify_scaling, [track, param], "render");
-		var task = Task.enqueueFunctionCall(render_impl, [canvas, track, false, param, async_mode, progress_cb], "render");
+		Task.enqueueFunctionCall(render_impl, [canvas, track, true, this.param, async_mode, progress_cb], "render");
+		Task.enqueueFunctionCall(identify_scaling, [track, this.param], "render");
+		var task = Task.enqueueFunctionCall(render_impl, [canvas, track, false, this.param, async_mode, progress_cb], "render");
 		return task;
 	}else{
-		render_impl(canvas, track, true, param, async_mode, progress_cb);
+		render_impl(canvas, track, true, this.param, async_mode, progress_cb);
 		// Esiate scaling factor
-		identify_scaling(track, param);
-		render_impl(canvas, track, false, param, async_mode, progress_cb);
+		identify_scaling(track, this.param);
+		render_impl(canvas, track, false, this.param, async_mode, progress_cb);
 	}
 }
 
@@ -1516,12 +1522,12 @@ function identify_scaling(track, param)
 	}
 }
 
-function clearPapers(canvas)
+Renderer.prototype.clear = function()
 {
 	for(var i = 0; i < pages.length; ++i){
 		pages[i].clear();
 	}
-	$(canvas).children().remove();
+	$(this.canvas).children().remove();
 	pages = new Array();
 }
 
@@ -2608,9 +2614,6 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	
 	console.log("render_impl called with " + draw);
 	
-	//if(draw) paper.clear();
-	//if(clear_paper) clearPapers(canvas);
-	
 	var y_title_offset = param.y_title_offset;
 	var x_offset = param.x_offset;
 	var width = param.paper_width - x_offset * 2;
@@ -2869,3 +2872,10 @@ function draw_coda(paper, x, y, align, coda)
 	group.transform("t"+x+","+(y-2));
 	return group;
 }
+
+return {
+	Parser: Parser,
+	Renderer: Renderer
+}
+
+})();

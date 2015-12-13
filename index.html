@@ -29,6 +29,36 @@ var mm_inch = 25.4; // mm/inch
 var paper_width = dpi * A4_width_mm / mm_inch;
 var paper_height = dpi * A4_height_mm / mm_inch;
 
+var timerStart = null;
+var tempo_bpm = 60;
+var lastindicator = null;
+
+function OnClockStart(seq, tempo)
+{
+	timerStart = Date.now();
+	tempo_bpm = tempo;
+	setInterval(function(){OnClock(seq);}, 100);
+}
+function OnClock(seq)
+{
+	var now = Date.now();
+	var diff = now - timerStart; // ms
+	var timemark = 4;
+	var measure_length = (1.0 / tempo_bpm ) * 60 * 1000 * timemark; // ms
+	var cmi = Math.floor(diff / measure_length);
+	//console.log("cmi = " + cmi);
+	
+	if(cmi >= seq.length) return;
+	
+	var m = seq[cmi];
+	var sx = m.renderprop.sx;
+	var ex = m.renderprop.ex;
+	var y = m.renderprop.y;
+	console.log([sx,y,ex-sx,50]);
+	if(lastindicator) lastindicator.remove();
+	lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 50, 5).attr({fill:'red','fill-opacity':0.3,stroke:0});
+}
+
 function Generate()
 {
 	var code = $("#score_code").val();
@@ -60,6 +90,10 @@ function Generate()
 				var renderer = new Fumen.Renderer($("#scorecanvas"), paper_width, paper_height);
 				renderer.clear();
 				var task = renderer.render(track, async_mode, showProgress);
+				
+				//var seq = new Fumen.Analyzer(track);
+				
+				//OnClockStart(seq.sequence, 240);
 			}catch(e){
 				console.log("Exception catched : " + e);
 				alert(e);

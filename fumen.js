@@ -609,7 +609,17 @@ Chord.prototype.getChordStr = function(tranpose, half_type)
 
 function LoopIndicator(indicators)
 {
+	// Note : Content of indicators are not always integers.
+	// intindicators is storage for integer indicators analyzed from indicators.
 	this.indicators = indicators;
+	this.intindicators = [];
+	var intrg = new RegExp(/(\d+)/);
+	for(var i = 0; i < this.indicators.length; ++i){
+		m = this.indicators[i].match(intrg);
+		if(m){
+			this.intindicators.push(parseInt(m[0]));
+		}
+	}
 }
 
 function Time(numer, denom)
@@ -1338,10 +1348,163 @@ function Renderer(canvas, paper_width, paper_height)
 		paper_height : paper_height,
 		repeat_mark_font : {'font-family':'Times New Roman','font-style':'italic','font-weight':'bold'},
 	};
+	this.track = null;
+}
+
+function Analyzer(track)
+{
+	this.sequence = [];
+	this.hasValidStructure = false;
+	
+	this.lastloopstart = {rg: null, m: null};
+	this.segnos = {};
+	 
+	// Analyze musical structure
+	var ctx = { rgi: 0, mi: -1};
+	var at = function(c){
+		return track.reharsal_groups[c.rgi].measures[c.mi];
+	}
+	var next = function(c){
+		do {
+			if(c.rgi >= track.reharsal_groups.length)
+				return null;
+			if(c.mi >= track.reharsal_groups[c.rgi].measures.length){
+				c.mi = 0;
+				c.rgi++;
+			}else{
+				c.mi++;
+			}
+			if(c.rgi < track.reharsal_groups.length && c.mi < track.reharsal_groups[c.rgi].measures.length)
+				return track.reharsal_groups[c.rgi].measures[c.mi];
+		} while( true );
+	}
+	
+	var m = next(ctx);
+	var startm = m;
+	var startctx = deepcopy(ctx);
+	var cur_loop = null;
+	var segnos = {};
+	var dalsegnos = {};
+	var codas = {};
+	var tocodas = {};
+	var maxloop = 1000;
+	var loopcnt = 0;
+	while(m){
+		if(loopcnt++ > maxloop){
+			throw "Error : Analyzing error : Infinite loop detected.";
+		}
+		var nextneeded = true;
+		var elems = classifyElements(m);
+		
+		// There is a limination that loop start and loop indicator can not exist in the same measure.
+		var jumploopindicator = false;
+		for( var ei = 0; ei < elems.measure_wide.length; ++ei){
+			var e = elems.measure_wide[ei];
+			if( e instanceof LoopIndicator ){
+				if(cur_loop){
+					if(e.intindicators.indexOf(cur_loop.cnt) >= 0){
+						break;
+					}else{
+						// Skip to the measure which has target loop indicator
+						while(m = next(ctx)){
+							if(findElement(m,function(ec){
+								return ( ec instanceof LoopIndicator ) &&
+									   ( ec.intindicators.indexOf(cur_loop.cnt) >= 0 )}))
+							{
+								jumploopindicator = true;
+								break;
+							}
+						}
+					}
+					break;
+				}else{
+					throw "Invalid loop indicator detected";
+				}
+			}
+		}
+		
+		if(jumploopindicator)
+			continue;
+		
+		this.sequence.push(m);
+		console.log("Push : ");
+		console.log(m);
+		
+		for( var ei = 0; ei < elems.header.length; ++ei ){
+			var e = elems.header[ei];
+			if( e instanceof LoopBeginMark ){
+				if(cur_loop && cur_loop.p.rgi == ctx.rgi && cur_loop.p.mi == ctx.mi){
+					// In only, same position.
+					cur_loop.cnt++;
+				}else{
+					cur_loop = { p:deepcopy(ctx),cnt: 1};
+				}
+			}else if( e instanceof Segno){
+				if(e.numnber in segnos){
+					segnos[e.number].cnt++;
+				}else{
+					segnos[e.number] = { p:deepcopy(ctx), cnt:0 };
+				}
+			}else if( e instanceof Coda ){
+				// TODO
+			}
+		}
+
+		for ( var ei = 0; ei < elems.footer.length; ++ei){
+			var e = elems.footer[ei];
+			if( e instanceof LoopEndMark ){
+				if(cur_loop.cnt < e.times){
+					m = at(cur_loop.p);
+					ctx = deepcopy(cur_loop.p);
+					nextneeded = false;
+					break;
+				}else{
+					cur_loop = null;
+				}
+			}else if( e instanceof DalSegno ){
+				if(e.number in dalsegnos){
+					// nop
+				}else{
+					dalsegnos[e.number] = true;
+					if(segnos[e.number].cnt == 0){
+						segnos[e.number].cnt++;
+						m = at(segnos[e.number].p);
+						ctx = deepcopy(segnos[e.number].p);
+						nextneeded = false;
+					}else{
+						delete segnos[e.number];
+					}
+				}
+			}else if( e instanceof DaCapo ){
+				m = startm;
+				ctx = deepcopy(startctx);
+				break;
+			}else if( e instanceof ToCoda){
+				if(e.number in tocodas){
+					tocodas[e.number].cnt++;
+					// Skip to the measure which has coda mark
+					nextneeded = false;
+					while(m = next(ctx)){
+						if(findElement(m,function(ec){ return ( ec instanceof Coda ) && ec.number == e.number })){
+							break;
+						}
+					}
+					break;
+				}else{
+					tocodas[e.number] = {cnt:1};
+				}
+			}
+		}
+		if(nextneeded){
+			m = next(ctx);
+		}
+	}
 }
 
 Renderer.prototype.render = function(track, async_mode, progress_cb)
 {	
+	this.track = track;
+	
 	if(async_mode){
 		Task.enqueueFunctionCall(render_impl, [this.canvas, track, true, this.param, async_mode, progress_cb], "render");
 		Task.enqueueFunctionCall(identify_scaling, [track, this.param], "render");
@@ -1402,6 +1565,17 @@ function classifyElements(measure)
 	return {header:header_elements, body:body_elements, footer:footer_elements, measure_wide:measure_wide_elements};
 }
 
+function findElement(measure, cond)
+{
+	var m = measure;
+	for(var ei = 0; ei < m.elements.length; ++ei){
+		var e = m.elements[ei];
+		if(cond(e)){
+			return e;
+		}
+	}
+	return null;
+}
 
 function maxtor(array, indexer, functor)
 {
@@ -2316,6 +2490,9 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				var pm = ml == 0 ? prev_measure : row_elements_list[ml-1];
 				var ne = pm ? pm.elements[ pm.elements.length - 1] : null;
 				var r = draw_boundary('begin', ne, e, m.new_line, paper, x, y_body_base + d5y, param, draw);
+				m.renderprop.y = y_body_base + d5y;
+				m.renderprop.sx = x;
+				m.renderprop.paper = paper;
 				x = r.x;
 				meas_start_x = r.bx;
 			}else if(e instanceof Time){
@@ -2452,6 +2629,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				var nm = (ml == row_elements_list.length-1) ? next_measure : row_elements_list[ml+1];
 				var ne = nm ? nm.elements[0] : null;
 				var r = draw_boundary('end', e, ne, nm ? nm.new_line : false, paper, x, y_body_base + d5y, param, draw);
+				m.renderprop.ex = x;
 				x = r.x;
 			}else if(e instanceof DaCapo){
 				text = raphaelText(paper, x, y_body_base - 8 + d5y/* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
@@ -2643,33 +2821,6 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	}
 
 	var global_macros = getGlobalMacros(track);
-	
-	/*
-	var x_global_scale = 1.0;
-	if( "XSCALE" in track.macros ){
-		x_global_scale = parseFloat(track.macros["XSCALE"]);
-	}
-	
-	var transpose = 0;
-	if( "TRANSPOSE" in track.macros)
-	{
-		var t = parseInt(track.macros["TRANSPOSE"]);
-		if(!isNaN(t))
-			transpose = t;
-	}
-	
-	var half_type = "GUESS";
-	if( "HALF_TYPE" in track.macros)
-	{
-		half_type = track.macros["HALF_TYPE"]; // "SHARP","FLAT","GUESS"
-	}
-	
-	var staff = "AUTO";
-	if( "STAFF" in track.macros)
-	{
-		staff = track.macros["STAFF"];
-	}
-	*/
 	
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Making pagination");
@@ -2875,7 +3026,8 @@ function draw_coda(paper, x, y, align, coda)
 
 return {
 	Parser: Parser,
-	Renderer: Renderer
+	Renderer: Renderer,
+	Analyzer: Analyzer
 }
 
 })();

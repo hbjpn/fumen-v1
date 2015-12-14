@@ -72,13 +72,21 @@ function OnClock(seq)
 	var sx = m.renderprop.sx;
 	var ex = m.renderprop.ex;
 	var y = m.renderprop.y;
-	console.log([sx,y,ex-sx,50]);
+	console.log([sx,y,ex-sx,30]);
 	if(lastindicator){ lastindicator.remove(); lastindicator = null; }
-	lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 50, 5).attr({fill:'red','fill-opacity':0.3,stroke:0});
+	lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 30).attr({fill:'red','fill-opacity':0.3,stroke:0});
+	var offsetx = m.renderprop.paper.canvas.offsetLeft;
+	var offsety = m.renderprop.paper.canvas.offsetTop;
+	//console.log("Offset");
+	//console.log([offsetx, offsety, offsety+y]);
+	//console.log("height = " + $(window).height());
+	window.scroll(0, offsety + y - $(window).height()/2);
 }
 
 function Generate()
 {
+	Stop();
+	
 	var code = $("#score_code").val();
 	var async_mode = $('input[name="blocking"]:checked').val() == "non-blocking";
 	var showProgress = false;
@@ -109,7 +117,6 @@ function Generate()
 				renderer.clear();
 				var task = renderer.render(track, async_mode, showProgress);
 				sequencer = new Fumen.Sequencer(track);
-
 			}catch(e){
 				console.log("Exception catched : " + e);
 				alert(e);

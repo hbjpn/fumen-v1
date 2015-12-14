@@ -33,11 +33,26 @@ var timerStart = null;
 var tempo_bpm = 60;
 var lastindicator = null;
 
+var sequencer = null;
+var timerid = null;
+
+function Play()
+{
+	OnClockStart(sequencer.sequence, 480);
+}
+function Stop()
+{
+	if(timerid){
+		clearInterval(timerid);
+		timerid = null;
+		if(lastindicator){ lastindicator.remove(); lastindicator = null; }
+	}
+}
 function OnClockStart(seq, tempo)
 {
 	timerStart = Date.now();
 	tempo_bpm = tempo;
-	setInterval(function(){OnClock(seq);}, 100);
+	timerid = setInterval(function(){OnClock(seq);}, 100);
 }
 function OnClock(seq)
 {
@@ -48,14 +63,17 @@ function OnClock(seq)
 	var cmi = Math.floor(diff / measure_length);
 	//console.log("cmi = " + cmi);
 	
-	if(cmi >= seq.length) return;
+	if(cmi >= seq.length){
+		Stop();
+		return;
+	}
 	
 	var m = seq[cmi];
 	var sx = m.renderprop.sx;
 	var ex = m.renderprop.ex;
 	var y = m.renderprop.y;
 	console.log([sx,y,ex-sx,50]);
-	if(lastindicator) lastindicator.remove();
+	if(lastindicator){ lastindicator.remove(); lastindicator = null; }
 	lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 50, 5).attr({fill:'red','fill-opacity':0.3,stroke:0});
 }
 
@@ -90,10 +108,8 @@ function Generate()
 				var renderer = new Fumen.Renderer($("#scorecanvas"), paper_width, paper_height);
 				renderer.clear();
 				var task = renderer.render(track, async_mode, showProgress);
-				
-				//var seq = new Fumen.Analyzer(track);
-				
-				//OnClockStart(seq.sequence, 240);
+				sequencer = new Fumen.Sequencer(track);
+
 			}catch(e){
 				console.log("Exception catched : " + e);
 				alert(e);
@@ -136,6 +152,8 @@ function Generate()
 <input type="radio" name="blocking" value="blocking" checked="checked">Blocking</input>
 <input type="radio" name="blocking" value="non-blocking">Non-Blocking</input>
 <button onClick="Generate()">Render</button>
+<button onClick="Play()">Play</button>
+<button onClick="Stop()">Stop</button>
 <p>To generate PDF file, please use print feature of your web browser. ( Select "save as pdf" )
 <hr/>
 </div>

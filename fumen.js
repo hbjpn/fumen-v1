@@ -1351,7 +1351,25 @@ function Renderer(canvas, paper_width, paper_height)
 	this.track = null;
 }
 
-function Analyzer(track)
+function ctxlt(c0, c1)
+{
+	if(c0.rgi < c1.rgi) return true;
+	else if(c0.rgi > c1.rgi) return false;
+	else if(c0.mi < c1.mi) return true;
+	else return false;
+}
+
+function ctxeq(c0, c1)
+{
+	return c0.rgi == c1.rgi && c0.mi == c1.mi;
+}
+
+function ctxlte(c0, c1)
+{
+	return ctxlt(c0, c1) || ctxeq(c0, c1);
+}
+
+function Sequencer(track)
 {
 	this.sequence = [];
 	this.hasValidStructure = false;
@@ -1384,7 +1402,6 @@ function Analyzer(track)
 	var startctx = deepcopy(ctx);
 	var cur_loop = null;
 	var segnos = {};
-	var dalsegnos = {};
 	var codas = {};
 	var tocodas = {};
 	var maxloop = 1000;
@@ -1433,7 +1450,7 @@ function Analyzer(track)
 		for( var ei = 0; ei < elems.header.length; ++ei ){
 			var e = elems.header[ei];
 			if( e instanceof LoopBeginMark ){
-				if(cur_loop && cur_loop.p.rgi == ctx.rgi && cur_loop.p.mi == ctx.mi){
+				if(cur_loop && ctxeq(cur_loop.p, ctx)){
 					// In only, same position.
 					cur_loop.cnt++;
 				}else{
@@ -1441,9 +1458,9 @@ function Analyzer(track)
 				}
 			}else if( e instanceof Segno){
 				if(e.numnber in segnos){
-					segnos[e.number].cnt++;
+
 				}else{
-					segnos[e.number] = { p:deepcopy(ctx), cnt:0 };
+					segnos[e.number] = { p:deepcopy(ctx)};
 				}
 			}else if( e instanceof Coda ){
 				// TODO
@@ -1462,26 +1479,32 @@ function Analyzer(track)
 					cur_loop = null;
 				}
 			}else if( e instanceof DalSegno ){
-				if(e.number in dalsegnos){
-					// nop
-				}else{
-					dalsegnos[e.number] = true;
-					if(segnos[e.number].cnt == 0){
-						segnos[e.number].cnt++;
-						m = at(segnos[e.number].p);
-						ctx = deepcopy(segnos[e.number].p);
-						nextneeded = false;
-					}else{
-						delete segnos[e.number];
+				if(e.number in segnos){
+					// All the toCoda between segno position and current position
+					// are marked as valid
+					for(var key in tocodas){
+						if( ctxlt(tocodas[key].p, ctx) && ctxlte(segnos[e.number].p, tocodas[key].p))
+							tocodas[key].valid = true;
 					}
+					m = at(segnos[e.number].p);
+					ctx = deepcopy(segnos[e.number].p);
+					nextneeded = false;
+				}else{
+					throw "Segno not found";
 				}
 			}else if( e instanceof DaCapo ){
+				// All the to Coda prior to current position is marked as valid
+				for(var key in tocodas){
+					if( ctxlt(tocodas[key].p, ctx) && ctxlte(startctx, tocodas[key].p ) )
+						tocodas[key].valid = true;
+				}
 				m = startm;
 				ctx = deepcopy(startctx);
+				nextneeded = false;
+				
 				break;
 			}else if( e instanceof ToCoda){
-				if(e.number in tocodas){
-					tocodas[e.number].cnt++;
+				if(e.number in tocodas && tocodas[e.number].valid){
 					// Skip to the measure which has coda mark
 					nextneeded = false;
 					while(m = next(ctx)){
@@ -1491,7 +1514,7 @@ function Analyzer(track)
 					}
 					break;
 				}else{
-					tocodas[e.number] = {cnt:1};
+					tocodas[e.number] = {valid:false, p:deepcopy(ctx)};
 				}
 			}
 		}
@@ -3027,7 +3050,7 @@ function draw_coda(paper, x, y, align, coda)
 return {
 	Parser: Parser,
 	Renderer: Renderer,
-	Analyzer: Analyzer
+	Sequencer: Sequencer
 }
 
 })();

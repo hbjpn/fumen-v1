@@ -1489,6 +1489,10 @@ function Sequencer(track)
 					m = at(segnos[e.number].p);
 					ctx = deepcopy(segnos[e.number].p);
 					nextneeded = false;
+					// Loop should be reset in general.
+					// TODO : If segno is in the middle of loop, cur_loop should be set
+					// to the last loopbegin mark. 
+					cur_loop = null;
 				}else{
 					throw "Segno not found";
 				}
@@ -1501,7 +1505,8 @@ function Sequencer(track)
 				m = startm;
 				ctx = deepcopy(startctx);
 				nextneeded = false;
-				
+				// Loop should be reset in general.
+				cur_loop = null;
 				break;
 			}else if( e instanceof ToCoda){
 				if(e.number in tocodas && tocodas[e.number].valid){

@@ -1561,7 +1561,7 @@ Sequencer.prototype.onClock = function()
 	var seq = this.sequence;
 	
 	if(cmi >= seq.length){
-		this.Stop();
+		this.stop();
 		return;
 	}
 	

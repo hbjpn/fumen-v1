@@ -1369,13 +1369,24 @@ function ctxlte(c0, c1)
 	return ctxlt(c0, c1) || ctxeq(c0, c1);
 }
 
-function Sequencer(track)
+/*
+ * Sequencer class. 
+ * 
+ * track : Track object including rendering information by Rederer object
+ * cb_play : Callback function called when sequencer is played.
+ * cb_stop : Callback function called when sequencer is stopped.
+ */
+function Sequencer(track, cb_play, cb_stop)
 {
 	this.sequence = [];
 	this.hasValidStructure = false;
 	
+	this.cb_play = cb_play == undefined ? null : cb_play;
+	this.cb_stop = cb_stop == undefined ? null : cb_stop;
+	
 	this.lastloopstart = {rg: null, m: null};
 	this.segnos = {};
+	
 	 
 	// Analyze musical structure
 	var ctx = { rgi: 0, mi: -1};
@@ -1533,11 +1544,17 @@ function Sequencer(track)
 
 Sequencer.prototype.play = function(tempo)
 {
-	timerStart = Date.now();
-	tempo_bpm = tempo;
+	if(this.timerid){
+		return; // Already played
+	}
+	this.timerStart = Date.now();
+	this.tempo_bpm = tempo;
 	var me = this;
 	this.timerid = setInterval(function(){ me.onClock();}, 100);
 	this.onClock(); 
+	if(this.cb_play){
+		this.cb_play();
+	}
 };
 
 Sequencer.prototype.stop = function()
@@ -1546,15 +1563,18 @@ Sequencer.prototype.stop = function()
 		clearInterval(this.timerid);
 		this.timerid = null;
 		if(this.lastindicator){ this.lastindicator.remove(); this.lastindicator = null; }
+		if(this.cb_stop){
+			this.cb_stop();
+		}
 	}
 };
 
 Sequencer.prototype.onClock = function()
 {
 	var now = Date.now();
-	var diff = now - timerStart; // ms
+	var diff = now - this.timerStart; // ms
 	var timemark = 4;
-	var measure_length = (1.0 / tempo_bpm ) * 60 * 1000 * timemark; // ms
+	var measure_length = (1.0 / this.tempo_bpm ) * 60 * 1000 * timemark; // ms
 	var cmi = Math.floor(diff / measure_length);
 	//console.log("cmi = " + cmi);
 	

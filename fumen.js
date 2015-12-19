@@ -1381,7 +1381,7 @@ function Sequencer(track)
 	var ctx = { rgi: 0, mi: -1};
 	var at = function(c){
 		return track.reharsal_groups[c.rgi].measures[c.mi];
-	}
+	};
 	var next = function(c){
 		do {
 			if(c.rgi >= track.reharsal_groups.length)
@@ -1395,7 +1395,7 @@ function Sequencer(track)
 			if(c.rgi < track.reharsal_groups.length && c.mi < track.reharsal_groups[c.rgi].measures.length)
 				return track.reharsal_groups[c.rgi].measures[c.mi];
 		} while( true );
-	}
+	};
 	
 	var m = next(ctx);
 	var startm = m;
@@ -1464,6 +1464,8 @@ function Sequencer(track)
 				}
 			}else if( e instanceof Coda ){
 				// TODO
+			}else if( e instanceof Time ){
+				
 			}
 		}
 
@@ -1528,6 +1530,51 @@ function Sequencer(track)
 		}
 	}
 }
+
+Sequencer.prototype.play = function(tempo)
+{
+	timerStart = Date.now();
+	tempo_bpm = tempo;
+	var me = this;
+	this.timerid = setInterval(function(){ me.onClock();}, 100);
+	this.onClock(); 
+};
+
+Sequencer.prototype.stop = function()
+{
+	if(this.timerid){
+		clearInterval(this.timerid);
+		this.timerid = null;
+		if(this.lastindicator){ this.lastindicator.remove(); this.lastindicator = null; }
+	}
+};
+
+Sequencer.prototype.onClock = function()
+{
+	var now = Date.now();
+	var diff = now - timerStart; // ms
+	var timemark = 4;
+	var measure_length = (1.0 / tempo_bpm ) * 60 * 1000 * timemark; // ms
+	var cmi = Math.floor(diff / measure_length);
+	//console.log("cmi = " + cmi);
+	
+	var seq = this.sequence;
+	
+	if(cmi >= seq.length){
+		this.Stop();
+		return;
+	}
+	
+	var m = seq[cmi];
+	var sx = m.renderprop.sx;
+	var ex = m.renderprop.ex;
+	var y = m.renderprop.y;
+	if(this.lastindicator){ this.lastindicator.remove(); this.lastindicator = null; }
+	this.lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 30).attr({fill:'red','fill-opacity':0.3,stroke:0});
+	var offsetx = m.renderprop.paper.canvas.offsetLeft;
+	var offsety = m.renderprop.paper.canvas.offsetTop;
+	window.scroll(0, offsety + y - $(window).height()/2);
+};
 
 Renderer.prototype.render = function(track, async_mode, progress_cb)
 {	

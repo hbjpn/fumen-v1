@@ -20,6 +20,18 @@
 	font-size: 13px;
 	padding: 10px;
 }
+
+.pb {
+	background-color:#f5ffff;
+	border:1px solid black;
+	float:left;
+	width:50px;
+	text-align: center;
+	margin-left: 10px;
+	cursor: default;
+	border-radius: 4px;
+	font-size: 13px;
+}
 </style>
 <script type="text/javascript">
 var dpi = 96; // dot/inch
@@ -34,54 +46,17 @@ var tempo_bpm = 60;
 var lastindicator = null;
 
 var sequencer = null;
-var timerid = null;
 
 function Play()
 {
-	OnClockStart(sequencer.sequence, 480);
+	if(sequencer)
+		sequencer.play($("#tempo").val());
 }
 function Stop()
 {
-	if(timerid){
-		clearInterval(timerid);
-		timerid = null;
-		if(lastindicator){ lastindicator.remove(); lastindicator = null; }
-	}
-}
-function OnClockStart(seq, tempo)
-{
-	timerStart = Date.now();
-	tempo_bpm = tempo;
-	timerid = setInterval(function(){OnClock(seq);}, 100);
-}
-function OnClock(seq)
-{
-	var now = Date.now();
-	var diff = now - timerStart; // ms
-	var timemark = 4;
-	var measure_length = (1.0 / tempo_bpm ) * 60 * 1000 * timemark; // ms
-	var cmi = Math.floor(diff / measure_length);
-	//console.log("cmi = " + cmi);
-	
-	if(cmi >= seq.length){
-		Stop();
-		return;
-	}
-	
-	var m = seq[cmi];
-	var sx = m.renderprop.sx;
-	var ex = m.renderprop.ex;
-	var y = m.renderprop.y;
-	console.log([sx,y,ex-sx,30]);
-	if(lastindicator){ lastindicator.remove(); lastindicator = null; }
-	lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 30).attr({fill:'red','fill-opacity':0.3,stroke:0});
-	var offsetx = m.renderprop.paper.canvas.offsetLeft;
-	var offsety = m.renderprop.paper.canvas.offsetTop;
-	//console.log("Offset");
-	//console.log([offsetx, offsety, offsety+y]);
-	//console.log("height = " + $(window).height());
-	window.scroll(0, offsety + y - $(window).height()/2);
-}
+	if(sequencer)
+		sequencer.stop();
+
 
 function Generate()
 {
@@ -159,9 +134,13 @@ function Generate()
 <input type="radio" name="blocking" value="blocking" checked="checked">Blocking</input>
 <input type="radio" name="blocking" value="non-blocking">Non-Blocking</input>
 <button onClick="Generate()">Render</button>
-<button onClick="Play()">Play</button>
-<button onClick="Stop()">Stop</button>
-<p>To generate PDF file, please use print feature of your web browser. ( Select "save as pdf" )
+<div style="margin-top: 10px;">
+<div style="float:left;"><input type="text" placeholder="bpm" value="100" id="tempo" /></div>
+<div onmousedown="Play()" class="pb">Play</div>
+<div onmousedown="Stop()" class="pb">Stop</div>
+</div>
+<br/>
+<p>To generate PDF file, please use print feature of your web browser. ( Select "save as pdf" )</p>
 <hr/>
 </div>
 <div style="background-color:gray; padding:10px;">

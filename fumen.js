@@ -1408,6 +1408,9 @@ function Sequencer(track, cb_play, cb_stop)
 		} while( true );
 	};
 	
+	var current_time_mark = new Time(4,4);
+	var current_time = 0;
+	
 	var m = next(ctx);
 	var startm = m;
 	var startctx = deepcopy(ctx);
@@ -1454,10 +1457,6 @@ function Sequencer(track, cb_play, cb_stop)
 		if(jumploopindicator)
 			continue;
 		
-		this.sequence.push(m);
-		console.log("Push : ");
-		console.log(m);
-		
 		for( var ei = 0; ei < elems.header.length; ++ei ){
 			var e = elems.header[ei];
 			if( e instanceof LoopBeginMark ){
@@ -1476,7 +1475,7 @@ function Sequencer(track, cb_play, cb_stop)
 			}else if( e instanceof Coda ){
 				// TODO
 			}else if( e instanceof Time ){
-				
+				current_time_mark = e;
 			}
 		}
 
@@ -1536,6 +1535,20 @@ function Sequencer(track, cb_play, cb_stop)
 				}
 			}
 		}
+		
+		var seqprop = {
+			t: current_time,
+			duration : (current_time_mark.numer / current_time_mark.denom)
+		};
+		
+		this.sequence.push([seqprop, m]);
+		
+		current_time += seqprop.duration;
+		
+		console.log("Push : ");
+		console.log(m);
+		console.log(seqprop);
+		
 		if(nextneeded){
 			m = next(ctx);
 		}
@@ -1549,6 +1562,9 @@ Sequencer.prototype.play = function(tempo)
 	}
 	this.timerStart = Date.now();
 	this.tempo_bpm = tempo;
+	
+	this.cmi = 0;
+	
 	var me = this;
 	this.timerid = setInterval(function(){ me.onClock();}, 100);
 	this.onClock(); 
@@ -1573,19 +1589,24 @@ Sequencer.prototype.onClock = function()
 {
 	var now = Date.now();
 	var diff = now - this.timerStart; // ms
-	var timemark = 4;
-	var measure_length = (1.0 / this.tempo_bpm ) * 60 * 1000 * timemark; // ms
-	var cmi = Math.floor(diff / measure_length);
-	//console.log("cmi = " + cmi);
 	
 	var seq = this.sequence;
 	
-	if(cmi >= seq.length){
+	var measure_length = (1.0 / this.tempo_bpm ) * 60 * 1000 * 4; // ms // TODO : "4" should be changed due to initial time mark.
+	
+	for(; this.cmi < seq.length; ++this.cmi){
+		if( diff >= seq[this.cmi][0].t * measure_length && 
+			diff < (seq[this.cmi][0].t + seq[this.cmi][0].duration) * measure_length){
+			break;
+		}
+	}
+	
+	if(this.cmi >= seq.length){
 		this.stop();
 		return;
 	}
 	
-	var m = seq[cmi];
+	var m = seq[this.cmi][1];
 	var sx = m.renderprop.sx;
 	var ex = m.renderprop.ex;
 	var y = m.renderprop.y;

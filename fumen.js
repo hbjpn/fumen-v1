@@ -1418,6 +1418,7 @@ function Sequencer(track, cb_play, cb_stop)
 	var segnos = {};
 	var codas = {};
 	var tocodas = {};
+	var fine = null;
 	var maxloop = 1000;
 	var loopcnt = 0;
 	while(m){
@@ -1478,6 +1479,22 @@ function Sequencer(track, cb_play, cb_stop)
 				current_time_mark = e;
 			}
 		}
+		
+		var seqprop = {
+			t: current_time,
+			duration : (current_time_mark.numer / current_time_mark.denom)
+		};
+			
+		this.sequence.push([seqprop, m]);
+		
+		current_time += seqprop.duration;
+		
+		console.log("Push : ");
+		console.log(m);
+		console.log(seqprop);
+		
+		
+		var validfinedetected = false;
 
 		for ( var ei = 0; ei < elems.footer.length; ++ei){
 			var e = elems.footer[ei];
@@ -1498,6 +1515,11 @@ function Sequencer(track, cb_play, cb_stop)
 						if( ctxlt(tocodas[key].p, ctx) && ctxlte(segnos[e.number].p, tocodas[key].p))
 							tocodas[key].valid = true;
 					}
+					// If fine is placed between Segno and DalSegno, marked as valid
+					if(fine){
+						if( ctxlt(fine.p, ctx) && ctxlte(startctx, fine.p ) )
+							fine.valid = true;
+					}
 					m = at(segnos[e.number].p);
 					ctx = deepcopy(segnos[e.number].p);
 					nextneeded = false;
@@ -1514,6 +1536,11 @@ function Sequencer(track, cb_play, cb_stop)
 					if( ctxlt(tocodas[key].p, ctx) && ctxlte(startctx, tocodas[key].p ) )
 						tocodas[key].valid = true;
 				}
+				// If fine is placed prior to current position, marked as valid.
+				if(fine){
+					if( ctxlt(fine.p, ctx) && ctxlte(startctx, fine.p ) )
+						fine.valid = true;
+				}
 				m = startm;
 				ctx = deepcopy(startctx);
 				nextneeded = false;
@@ -1525,7 +1552,7 @@ function Sequencer(track, cb_play, cb_stop)
 					// Skip to the measure which has coda mark
 					nextneeded = false;
 					while(m = next(ctx)){
-						if(findElement(m,function(ec){ return ( ec instanceof Coda ) && ec.number == e.number })){
+						if(findElement(m,function(ec){ return ( ec instanceof Coda ) && ec.number == e.number; })){
 							break;
 						}
 					}
@@ -1533,21 +1560,18 @@ function Sequencer(track, cb_play, cb_stop)
 				}else{
 					tocodas[e.number] = {valid:false, p:deepcopy(ctx)};
 				}
+			}else if( e instanceof Fine){
+				if(!fine){
+					fine = {valid:false, p:deepcopy(ctx)};
+				}else if(fine.valid){
+					validfinedetected = true;
+				}
 			}
 		}
 		
-		var seqprop = {
-			t: current_time,
-			duration : (current_time_mark.numer / current_time_mark.denom)
-		};
-		
-		this.sequence.push([seqprop, m]);
-		
-		current_time += seqprop.duration;
-		
-		console.log("Push : ");
-		console.log(m);
-		console.log(seqprop);
+		if(validfinedetected){
+			break; // End of a song
+		}
 		
 		if(nextneeded){
 			m = next(ctx);

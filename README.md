@@ -7,10 +7,16 @@ Chord and Rythm score rendering engine
 
 ## Getting started
 ```javascript
+
+// Initialize fumen on ready function
+$(document).ready(function(){
+	Fumen.Initialize();
+});
+
 // Make a parser object. 
 var p = new Fumen.Parser();
 
-/ Parse fumen markdown texts
+// Parse fumen markdown texts
 var track = p.parse(code);
 
 // Maker a renderer object.

@@ -2916,15 +2916,27 @@ function getMacros(global_macros, rg)
 	return macros_to_apply;
 }
 
-$(document).ready(function(){
-	/**
-	 * Load all of the web-fonts in-advance.
-	 * BBox size of 1st rendered web-font is different from that of rendered second and after.
-	 * Is this a bug of browser ? 
-	 */
-	paper = Raphael($("#invisible_view")[0],500,500);
+function makeDammyPaper()
+{
+	$("body").append("<div id='invisible_view2'></div>");
+	$("#invisible_view2").css({opacity:0.2, position:"absolute",top:0, left:0});
+	paper = Raphael($("#invisible_view2")[0],1,1);
+	return paper;
+}
+
+function removeDammyPaper()
+{
+	$("#invisible_view2").remove();
+}
+
+function Initialize()
+{
+	// Pre-load web-fonts because BBox of the fonts can not be correctly retrieved
+	// for the first-rendered fonts. This may be a browser bug ?
+	var paper = makeDammyPaper();
 	var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt","icomoon");
-});
+	removeDammyPaper();
+}
 
 function render_impl(canvas, track, just_to_estimate_size, param, async_mode, progress_cb)
 {
@@ -2940,7 +2952,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		paper = makeNewPaper(canvas, param);
 	}else{
 		// Dammy paper object 
-		paper = Raphael($("#invisible_view")[0], param.paper_width, param.paper_height);
+		paper = makeDammyPaper();
 	}
 		
 	var y_base = param.y_first_page_offset;
@@ -3077,7 +3089,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		
 		var task = Task.enqueueFunctionCall(function(){
 			if(!draw){
-				$("#invisible_view").children().remove();
+				removeDammyPaper();
 			}
 		}, [], "renderpageloop");
 		
@@ -3120,7 +3132,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	
 		
 		if(!draw){
-			$("#invisible_view").children().remove();
+			removeDammyPaper();
 		}
 	
 	} // end async switch
@@ -3167,7 +3179,8 @@ function draw_coda(paper, x, y, align, coda)
 return {
 	Parser: Parser,
 	Renderer: Renderer,
-	Sequencer: Sequencer
+	Sequencer: Sequencer,
+	Initialize: Initialize
 }
 
 })();

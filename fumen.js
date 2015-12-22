@@ -1460,7 +1460,7 @@ function Sequencer(track, cb_play, cb_stop)
 		
 		for( var ei = 0; ei < elems.header.length; ++ei ){
 			var e = elems.header[ei];
-			if( e instanceof LoopBeginMark ){
+			if( e instanceof LoopBeginMark || e instanceof LoopBothMark){
 				if(cur_loop && ctxeq(cur_loop.p, ctx)){
 					// In only, same position.
 					cur_loop.cnt++;
@@ -1498,7 +1498,7 @@ function Sequencer(track, cb_play, cb_stop)
 
 		for ( var ei = 0; ei < elems.footer.length; ++ei){
 			var e = elems.footer[ei];
-			if( e instanceof LoopEndMark ){
+			if( e instanceof LoopEndMark || e instanceof LoopBothMark){
 				if(cur_loop.cnt < e.times){
 					m = at(cur_loop.p);
 					ctx = deepcopy(cur_loop.p);

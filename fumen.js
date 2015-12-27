@@ -1781,7 +1781,26 @@ function identify_scaling(track, param)
 				Q_w_for_C = 0;
 				meas_max_widths = new Array();
 			}
-
+			// Now, C is number of columns per row
+			// Q_w_for_C is width of the row when number of column is C, that is, sum of the maximum width measure of each columns.
+			// meas_max_widths is maximum width of the measures of each columns. Sum of meas_max_widths equals to Q_w_for_C.
+			
+			// Additional scaling to variable of width of columns
+			var limitvariation = true;
+			if(limitvariation){
+				var sdratio = 0.75; // ratio of standard deviation. sigma_target/sigma. 0 means all the column bcomes the same width(average width).
+				var avg = 0.0;
+				for(var c = 0; c < C; ++c)
+					avg += meas_max_widths[c];
+				avg /= C;
+				Q_w_for_C = 0;
+				for(var c = 0; c < C; ++c){
+					meas_max_widths[c] = meas_max_widths[c] - ( meas_max_widths[c] - avg ) * ( 1 - sdratio );
+					Q_w_for_C += meas_max_widths[c];
+				}
+			}
+			
+			// Calculate new body width and scaling
 			var reharsal_wide_scaling = width / Q_w_for_C; 
 			for(var ml = 0; ml < rg.measures.length; ++ml){
 				var m = rg.measures[ml];

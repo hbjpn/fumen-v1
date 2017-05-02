@@ -622,6 +622,11 @@ function LoopIndicator(indicators)
 	}
 }
 
+function LongRestIndicator(longrestlen)
+{
+	this.longrestlen = longrestlen;
+}
+
 function Time(numer, denom)
 {
 	this.numer = numer;
@@ -787,6 +792,8 @@ var TOKEN_BRACKET_LS = 5; // Left square
 var TOKEN_BRACKET_RS = 6; // Right square
 var TOKEN_BRACKET_LA = 7; // Left angle
 var TOKEN_BRACKET_RA = 8; // Right angle
+var TOKEN_BRACKET_LW = 9; // Left wave {
+var TOKEN_BRACKET_RW = 10; // Right wave }
 var TOKEN_MB = 14;             // "|"
 var TOKEN_MB_DBL = 15;         // "||"
 var TOKEN_MB_LOOP_BEGIN = 16;  // "||:"
@@ -848,13 +855,14 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		return {token:plain_str, s:s, type:TOKEN_STRING, ss:skipped_spaces};
 	}
 		
-	var r = charIsIn(s[0], '[]<>(),\n\/%=');
+	var r = charIsIn(s[0], '[]<>(){},\n\/%=');
 	if(r != null){
 		return {token: s[0], s: s.substr(1), ss:skipped_spaces,
 			type: [
 				TOKEN_BRACKET_LS, TOKEN_BRACKET_RS,
 				TOKEN_BRACKET_LA, TOKEN_BRACKET_RA,
 				TOKEN_BRACKET_LR, TOKEN_BRACKET_RR,
+				TOKEN_BRACKET_LW, TOKEN_BRACKET_RW,
 				TOKEN_COMMA, TOKEN_NL, TOKEN_SLASH,
 				TOKEN_PERCENT, TOKEN_EQUAL][r.index]
 		};
@@ -969,6 +977,26 @@ Parser.prototype.parseLoopIndicator = function(trig_token_type, s)
 	}
 	
 	return {loopIndicator: new LoopIndicator(indicators), s:s};
+};
+
+Parser.prototype.parseLongRestIndicator = function(trig_token_type, s)
+{
+	// prerequisite
+	//   trig_token_type = TOKEN_BRACKET_LW
+
+	var r = this.nextToken(s);
+	s = r.s;
+	
+	if(r.type != TOKEN_WORD) this.onParseError("ERROR_WHILE_PARSE_OMIT_INDICATOR");
+
+	longrestlen = r.token;
+	
+	r = this.nextToken(s);
+	s = r.s;
+	
+	if(r.type != TOKEN_BRACKET_RW) this.onParseError("ERROR_WHILE_PARSE_OMIT_INDICATOR");
+	
+	return {longRestIndicator: new LongRestIndicator(longrestlen), s:s};
 };
 
 Parser.prototype.parseTime = function(trig_token_type, s)
@@ -1142,6 +1170,11 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 		case TOKEN_BRACKET_LS:
 			var r = this.parseLoopIndicator(r.type, r.s);
 			measure.elements.push(r.loopIndicator);
+			s = r.s;
+			break;
+		case TOKEN_BRACKET_LW:
+			var r = this.parseLongRestIndicator(r.type, r.s);
+			measure.elements.push(r.longRestIndicator);
 			s = r.s;
 			break;
 		case TOKEN_MB:
@@ -1343,6 +1376,7 @@ function Renderer(canvas, paper_width, paper_height)
 		rs_area_height : 24, // Rhythm Slashes Area
 		rm_area_height : 30, // Reharsal Mark Area
 		mh_area_height : 25, // Measure Header Area ( Repeat signs area )
+		header_body_margin : 10, // Margin between header and body
 		max_scaling : 1.2,
 		paper_width : paper_width,
 		paper_height : paper_height,
@@ -1375,9 +1409,17 @@ function ctxlte(c0, c1)
  * track : Track object including rendering information by Rederer object
  * cb_play : Callback function called when sequencer is played.
  * cb_stop : Callback function called when sequencer is stopped.
+ * param : Sequencer configurable parameters
+ * 		auto_scroll : Auto scroll On/Off
  */
-function Sequencer(track, cb_play, cb_stop)
+function Sequencer(track, cb_play, cb_stop, param)
 {
+	if(param === undefined)	param = {};
+	// Default sequencer prameters
+	if(param.auto_scroll === undefined) param.auto_scroll = false; // Auto scroll On/Off
+
+	this.param = param;
+	
 	this.sequence = [];
 	this.hasValidStructure = false;
 	
@@ -1458,6 +1500,15 @@ function Sequencer(track, cb_play, cb_stop)
 		if(jumploopindicator)
 			continue;
 		
+		// Check if long rest indicator exists. If exists, just duplicate sequence for that duration.
+		var longrest = null;
+		for( var ei = 0; ei < elems.measure_wide.length; ++ei){
+			var e = elems.measure_wide[ei];
+			if( e instanceof LongRestIndicator ){
+				longrest = parseInt(e.longrestlen);
+			}
+		}
+		
 		for( var ei = 0; ei < elems.header.length; ++ei ){
 			var e = elems.header[ei];
 			if( e instanceof LoopBeginMark || e instanceof LoopBothMark){
@@ -1480,19 +1531,30 @@ function Sequencer(track, cb_play, cb_stop)
 			}
 		}
 		
-		var seqprop = {
-			t: current_time,
-			duration : (current_time_mark.numer / current_time_mark.denom)
-		};
+		if(longrest !== null){
+			for(var i = 0; i < longrest ; ++i){
+				var seqprop = {
+					t: current_time,
+					duration : (current_time_mark.numer / current_time_mark.denom)
+				};
+				
+				this.sequence.push([seqprop, m]);
+				current_time += seqprop.duration;
+			}
+		}else{
+			// No long rest (corresponding to longrest = 1)
+			var seqprop = {
+				t: current_time,
+				duration : (current_time_mark.numer / current_time_mark.denom)
+			};
 			
-		this.sequence.push([seqprop, m]);
-		
-		current_time += seqprop.duration;
-		
+			this.sequence.push([seqprop, m]);
+			current_time += seqprop.duration;
+		}
+
 		console.log("Push : ");
 		console.log(m);
-		console.log(seqprop);
-		
+		console.log(seqprop);		
 		
 		var validfinedetected = false;
 
@@ -1579,6 +1641,11 @@ function Sequencer(track, cb_play, cb_stop)
 	}
 }
 
+Sequencer.prototype.auto_scroll = function(onoff)
+{
+	this.param.auto_scroll = onoff;
+};
+
 Sequencer.prototype.play = function(tempo)
 {
 	if(this.timerid){
@@ -1638,7 +1705,9 @@ Sequencer.prototype.onClock = function()
 	this.lastindicator = m.renderprop.paper.rect(sx, y, ex-sx, 30).attr({fill:'red','fill-opacity':0.3,stroke:0});
 	var offsetx = m.renderprop.paper.canvas.offsetLeft;
 	var offsety = m.renderprop.paper.canvas.offsetTop;
-	window.scroll(0, offsety + y - $(window).height()/2);
+	if(this.param.auto_scroll){
+		window.scroll(0, offsety + y - $(window).height()/2);
+	}
 };
 
 Renderer.prototype.render = function(track, async_mode, progress_cb)
@@ -1656,7 +1725,7 @@ Renderer.prototype.render = function(track, async_mode, progress_cb)
 		identify_scaling(track, this.param);
 		render_impl(this.canvas, track, false, this.param, async_mode, progress_cb);
 	}
-}
+};
 
 function classifyElements(measure)
 {
@@ -1681,6 +1750,8 @@ function classifyElements(measure)
 			}else if(e instanceof Rest){
 				body_elements.push(e);
 			}else if(e instanceof LoopIndicator){
+				measure_wide_elements.push(e);
+			}else if(e instanceof LongRestIndicator){
 				measure_wide_elements.push(e);
 			}else if(e instanceof Time){
 				// Time mark is treated as header element irrespective of its positionat the second element is treated as header part
@@ -2672,7 +2743,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		}
 		
 		// Margin between header and body
-		x += 10;
+		x += param.header_body_margin;
 		
 		m.header_width = x - meas_base_x;
 		
@@ -2831,8 +2902,28 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				if(draw) paper.path(svgLine(sx, ly, fx, ly)).attr({"stroke-width":"1"});
 				var s = e.indicators.join(",");
 				if(draw) raphaelText(paper, sx + 2, ly, s, 10, "lt");
+			}else if(e instanceof LongRestIndicator){	
+				var sx = meas_start_x + m.header_width - param.header_body_margin; // More beautiful for long rest if header body margin is omitted
+				var fx = meas_end_x - m.footer_width;
+				var rh = param.row_height;
+				var r_lrmargin = 0.05;
+				var min_lrmargin = 5;
+				var max_lrmargin = 20;
+				var vlmargin = 0.2;
+				
+				lrmargin = Math.max( min_lrmargin, Math.min(max_lrmargin, (sx+fx) * r_lrmargin) );
+				
+				var lx = sx + lrmargin;
+				var rx = fx - lrmargin;
+				if(draw) paper.path(svgLine(lx, y_body_base + param.row_height/2,
+						rx, y_body_base + param.row_height/2)).attr({"stroke-width":"7"});
+				if(draw) paper.path(svgLine(lx, y_body_base + rh * vlmargin,
+						lx, y_body_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
+				if(draw) paper.path(svgLine(rx, y_body_base + rh * vlmargin,
+						rx, y_body_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
+				if(draw) raphaelText(paper, (sx+fx)/2, y_body_base, e.longrestlen, 14, "cm","icomoon");
 			}else{
-				throw "ERROR";
+				throw "Unkown measure wide instance detected";
 			}
 		}
 		

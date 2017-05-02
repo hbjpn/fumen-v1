@@ -53,8 +53,10 @@ $(document).ready(function(){
 
 function Play()
 {
-	if(sequencer)
+	if(sequencer){
+		sequencer.auto_scroll($("#cb_auto_scroll").prop('checked'));
 		sequencer.play($("#tempo").val());
+	}
 }
 function Stop()
 {
@@ -137,7 +139,11 @@ function Generate()
 | A ||: B | C :||: D | E :|| F |
 
 [F]
+|  {4} | A7 D7 | A ||.
+
+[G]
 | C | Cm <Fine> | F | F7 <D.S.2> |
+
 
 </textarea>
 <hr/>
@@ -146,6 +152,7 @@ function Generate()
 <button onClick="Generate()">Render</button>
 <div style="margin-top: 10px;">
 <div style="float:left;"><input type="text" placeholder="bpm" value="100" id="tempo" /></div>
+<div style="float:left;"><input type="checkbox" name="auto_scroll" value="auto_scroll" id="cb_auto_scroll" >Auto Scroll</input></div>
 <div onmousedown="Play()" class="pb">Play</div>
 <div onmousedown="Stop()" class="pb">Stop</div>
 </div>

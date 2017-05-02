@@ -2172,7 +2172,12 @@ var _6791113_font_profile = {
 	'M'   : function(p){return [[16,-7,"M"],[13,-2,p?p:""]];},
 	'm'   : function(p){return [[16,-7,"m"]];},
 	'add' : function(p){return [[20,-10,"a"],[13,-2,p?p:""]];},
-	'dig' : function(p){return [[13,-2,p?p:""]];}
+	'dig' : function(p){
+			if(!p) p = "";
+			else if(p=="11") p = "\x25";
+			else if(p=="13") p = "\x26";
+			return [[13,-2,p]];
+		}
 };
 var _5th_global_dy = 0;
 var _5th_font_profile = {
@@ -2782,27 +2787,17 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				chord_space = Math.floor(40*x_global_scale / num_chord_in_a_measure);
 			
 			if(e instanceof Chord){
-				if(false){
-					var csi = e.getChordStr(transpose, half_type);
-					
-					var text = raphaelText(paper, x, y_body_base + param.row_height/2, csi[1], 16, "lc", (csi[0]?"icomoon":null));
-					//text.attr({'font-family':'icomoon'});
-					x += text.getBBox().width * m.body_scaling;
-					x += (chord_space*m.body_scaling);
-					if(!draw) text.remove();
-				}else{
-					var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
-							param, draw, chord_space, x_global_scale, m.body_scaling);
-					x = cr.x;
-					if(!isFinite(x)){
-						console.log("Illegal calculation of x is detected");
-					}
-					if(g_prev_chord_has_tie || (chord_name_str == e.chord_name_str)){
-						cr.group.remove(); // Not draw chord symbol
-					}
-					g_prev_chord_has_tie = e.tie;
-					chord_name_str = e.chord_name_str;
+				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
+						param, draw, chord_space, x_global_scale, m.body_scaling);
+				x = cr.x;
+				if(!isFinite(x)){
+					console.log("Illegal calculation of x is detected");
 				}
+				if(g_prev_chord_has_tie || (chord_name_str == e.chord_name_str)){
+					cr.group.remove(); // Not draw chord symbol
+				}
+				g_prev_chord_has_tie = e.tie;
+				chord_name_str = e.chord_name_str;
 			}else if(e instanceof Rest){
 				var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
 				var yoffsets = {1:0, 2:0, 4:0, 8:0, 16:7, 32:7, 64:14, 128:14};

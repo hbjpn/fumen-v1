@@ -1933,7 +1933,7 @@ Renderer.prototype.clear = function()
 	}
 	$(this.canvas).children().remove();
 	pages = new Array();
-}
+};
 
 function makeNewPaper(canvas, param)
 {
@@ -1951,33 +1951,6 @@ function makeNewPaper(canvas, param)
 	ChordRenderBuffer = {};
 	
 	return paper;
-}
-
-function incrementY(y_base, canvas, paper, page_count, param, draw)
-{
-	var multi_paper_mode = true;
-	if(multi_paper_mode){
-		if(y_base + 2 * param.row_interval < (param.paper_height - param.y_offset) ){
-			y_base = y_base + param.row_interval;
-		}else{
-			page_count++;
-			// Multi paper mode
-			// <svg> tag is seprated for each paper.
-			y_base = param.y_offset;
-			if(draw) paper = makeNewPaper(canvas, param);
-		}	
-	}else{
-		// Single paper mode
-		// All the svg elements are draw to single <svg> tag.
-		if((y_base - page_count * param.paper_height) + 2 * param.row_interval < (param.paper_height - param.y_offset) ){
-			y_base = y_base + param.row_interval;
-		}else{
-			page_count++; 
-			y_base = page_count * param.paper_height + param.y_offset;
-		}
-	}
-	
-	return {y_base:y_base, page_count:page_count, paper:paper};
 }
 
 function get_boundary_sign(e)
@@ -3183,6 +3156,12 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 			}, ctx1, "renderpageelemloop");
 			
 			var lasttask = Task.enqueueFunctionCall(function(){
+				// Page number footer
+				footerstr = (songname + " - " + (pageidx+1) + " of " + (pageslist.length));
+				//alert(footerstr);
+				raphaelText(ctx1.paper, param.paper_width/2, param.paper_height - 60, footerstr, 12, "ct");
+				
+				// Make new page
 				if(ctx1.draw && pageidx != pageslist.length-1){
 					ctx1.paper = makeNewPaper(canvas, ctx1.param);
 					ctx1.y_base = ctx1.param.y_offset;
@@ -3228,7 +3207,11 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 					y_base = r.y_base;
 				}
 			}
-	
+			// Page number footer
+			footerstr = (songname + " - " + (pageidx+1) + " of " + (pageslist.length));
+			//alert(footerstr);
+			raphaelText(paper, param.paper_width/2, param.paper_height - 60, footerstr, 12, "ct");
+			
 			if(draw && pageidx != pageslist.length-1){
 				paper = makeNewPaper(canvas, param);
 				y_base = param.y_offset;

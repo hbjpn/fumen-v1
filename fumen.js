@@ -2117,13 +2117,17 @@ function render_chord_as_string(chord, transpose, half_type, paper, x, y_body_ba
 
 	var csi = chord.getChordStr(transpose, half_type);
 	
+	var group = paper.set();
+	
 	var text = raphaelText(paper, x, y_body_base + row_height/2, csi[1], 16, "lc", (csi[0]?"icomoon":null));
 	//text.attr({'font-family':'icomoon'});
 	x += text.getBBox().width * x_global_scale * body_scaling;
 	x += (chord_space*body_scaling);
 	if(!draw) text.remove();
 	
-	return {x:x};
+	group.push(text);
+	
+	return {group:group, x:x};
 }
 
 var ChordRenderBuffer = {
@@ -2766,7 +2770,10 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				if(!isFinite(x)){
 					console.log("Illegal calculation of x is detected");
 				}
-				if(g_prev_chord_has_tie || (chord_name_str == e.chord_name_str)){
+				// If chord is continued from the previous chord with tie, or 
+				// more than 1 adjacent valid chords are the same, 
+				// the chord(s) except the first one are not drawn. This is not applied for invalid chord.
+				if(g_prev_chord_has_tie || (e.is_valid_chord && (chord_name_str == e.chord_name_str))){
 					cr.group.remove(); // Not draw chord symbol
 				}
 				g_prev_chord_has_tie = e.tie;

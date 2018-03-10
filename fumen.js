@@ -646,14 +646,16 @@ function LoopBeginMark()
 {
 }
 
-function LoopEndMark(times)
+function LoopEndMark(param)
 {
-	this.times = times;
+	this.times = param.times;
+	this.ntimes = param.ntimes;
 }
 
-function LoopBothMark(times)
+function LoopBothMark(param)
 {
-	this.times = times;
+	this.times = param.times;
+	this.ntimes = param.ntimes;
 }
 
 function MeasureBoundaryFinMark()
@@ -877,13 +879,16 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 	}
 	
 	var m = null;
-	m = s.match(/^(\:\|\|\:?)(x(\d+))?/); // ":||" or ":||:". Repeat number can be specified as "x<digit>"
+	m = s.match(/^(\:\|\|\:?)(x(\d+|X))?/); // ":||" or ":||:". Repeat number can be specified as "x<digit|n>"
 	if (m != null)
 	{
 		var loopTimes = 2;
-		if(m[2]!=null)
-			loopTimes = Number(m[3]);
-		return {token:m[0],s:s.substr(m[0].length), ss:skipped_spaces, type:(m[1]==":||:" ? TOKEN_MB_LOOP_BOTH : TOKEN_MB_LOOP_END),param:loopTimes};
+		var isNTimes=false;
+		if(m[2]!=null){
+			if(m[3]=="X") isNTimes = true;
+			else loopTimes = Number(m[3]);
+		}
+		return {token:m[0],s:s.substr(m[0].length), ss:skipped_spaces, type:(m[1]==":||:" ? TOKEN_MB_LOOP_BOTH : TOKEN_MB_LOOP_END),param:{times:loopTimes,ntimes:isNTimes}};
 	}
 	
 	// "Word characters"
@@ -2075,8 +2080,9 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		x += 3;
 		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"});
 		//x += 20;
-		if(e0.times !== null && e0.times != 2){
-			if(draw) text = raphaelText(paper, x, y_body_base + row_height + 8, "(x" + e0.times+")", 13, "rc");
+		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
+			stimes = e0.ntimes == true ? "X" : ""+e0.times;
+			if(draw) text = raphaelText(paper, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc");
 		}
 		bx = x;
 		break;
@@ -2092,8 +2098,9 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
 		
 		//x += 20;
-		if(e0.times !== null && e0.times != 2){
-			if(draw) text = raphaelText(paper, x, y_body_base + row_height + 8, "(x" + e0.times+")", 13, "rc");
+		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
+			stimes = e0.ntimes == true ? "X" : ""+e0.times;
+			if(draw) text = raphaelText(paper, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc");
 		}
 		x += 4;
 		if(draw) paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"});

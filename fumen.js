@@ -2943,7 +2943,9 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		}
 	}
 	
-	y_base += Math.max.apply(null, measure_heights);
+	// max.apply with 0 length array will generate -inf value, then check if measure_heights has at least one element
+	if( measure_heights.length > 0 )
+		y_base += Math.max.apply(null, measure_heights);
 	
 	return {y_base:y_base};
 }

@@ -1036,7 +1036,7 @@ Parser.prototype.parseSign = function(trig_token_type, s)
 {
 	// Read until ">" found
 	var index = s.indexOf(">");
-	if(index < 0) throw "Parse error on Sign";
+	if(index < 0) throw "Parse error on Sign(0)";
 	
 	var signStr = s.slice(0, index);
 	s = s.slice(index+1); // ">" is skipped
@@ -1044,7 +1044,7 @@ Parser.prototype.parseSign = function(trig_token_type, s)
 	// Parse sign string
 	// "D.S.([0-9]+)?( al Coda([0-9]+)?)
 	var r = this.nextToken(signStr, WORD_DEFINIITON_GENERAL); 
-	if(r.type != TOKEN_WORD) throw "Error";
+	if(r.type != TOKEN_WORD) throw "Parse error on Sign(1)";
 	regDS = /D\.S\.([0-9]+)?/;
 	regCoda = /Coda([0-9]+)?/;
 	regSegno = /S(egno)?([0-9]+)?$/;
@@ -1061,9 +1061,9 @@ Parser.prototype.parseSign = function(trig_token_type, s)
 		sign = new Segno(m[2] === undefined ? null : m[2], m2 ? m2[1] : null);
 	}else if(r.token == "to"){
 		r = this.nextToken(r.s, WORD_DEFINIITON_GENERAL);
-		if(r.type != TOKEN_WORD) throw "Error";
+		if(r.type != TOKEN_WORD) throw "Invalid token after to.";
 		m = r.token.match(regCoda);
-		if(m === null) throw "Error";
+		if(m === null) throw "Coda was not detected";
 		sign = new ToCoda(m[1] === undefined ? null : m[1]);
 	}else if( (m = r.token.match(regDS)) !== null){
 		var dsNumber = m[1] === undefined ? null : m[1];
@@ -1071,17 +1071,17 @@ Parser.prototype.parseSign = function(trig_token_type, s)
 		r = this.nextToken(r.s, WORD_DEFINIITON_GENERAL);
 		if(r.type == TOKEN_END){
 		}else{
-			if(r.type != TOKEN_WORD) throw "Error";
-			if(r.token != "al") throw "Error";
+			if(r.type != TOKEN_WORD) throw "Invalid token after D.S.(1)";
+			if(r.token != "al") throw "Invalid token after D.S.(2)";
 			r = this.nextToken(r.s, WORD_DEFINIITON_GENERAL);
-			if(r.type != TOKEN_WORD) throw "Error";
+			if(r.type != TOKEN_WORD) throw "Invalid token after al";
 			if(r.token == "Fine") al = new Fine();
 			else if( (m = r.token.match(regCoda)) !== null ) al = new Coda(m[1] === undefined ? null : m[1]);
-			else throw "Error";
+			else throw "Invalid token after al(2)";
 		}
 		sign = new DalSegno(dsNumber, al);
 	}else{
-		throw "Error";
+		throw "Invalid token in parse sign";
 	}
 	
 	return {sign: sign, s:s};

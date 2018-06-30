@@ -2978,6 +2978,12 @@ function getGlobalMacros(track)
 	{
 		macros_to_apply.staff = track.macros["STAFF"];
 	}
+
+	macros_to_apply.row_margin = null;
+	if( "ROW_MARGIN" in track.macros)
+	{
+		macros_to_apply.row_margin = parseInt(track.macros["ROW_MARGIN"]);
+	}
 	
 	return macros_to_apply;
 }
@@ -3067,6 +3073,10 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	}
 
 	var global_macros = getGlobalMacros(track);
+	
+	// Apply for rendering parameter if specified by global macros
+	if (global_macros.row_margin !== null)
+		param.row_margin = global_macros.row_margin;
 	
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Making pagination");

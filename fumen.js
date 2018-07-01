@@ -724,44 +724,14 @@ Fine.prototype.toString = function(){
 	return "Fine";
 };
 
+function Comment(comment)
+{
+	this.comment = comment;
+}
+
 
 function Parser(error_msg_callback)
 {
-/*
- Here EBNF representation of fumen grammer
- 
- score = {macro_exp | reharsal_part};
- macro_exp = "%", regular_string, "=", value;
- regular_string = "a"|"b"|"c"|"d";
- value = string_token | number;
- string_token = '"', any_string_excluding_dq, '"' | "'", any_string_excluding_sq, "'";
- number = "1"|"2"|"3"|"4"|"5";  
-  
- reharsal_part = reharsal_mark, {measure_line};
- reharsal_mark = "[", string_token, "]" | "[", regular_string, "]";
-  
- measure_line = {measure_boundary, measure_content}, measure_boundary, measure_line_end;
- measure_line_end = "\n"; 
-  
- measure_boundary = "|" | "||" | "||:" | ":||" | ":||:" | "|||";
- measure_content = {repeat_bracket | time_indicator | chord_symbol | inline_spaces};
-  
- repeat_bracket = "[", regular_string, "]" | "[", string_token, "]";
- time_indicator = "(", integer, "/", integer, ")";
- note = "A"|"B"|"C"|"D"|"E"|"F"|"G";
- chord_symbol = note,["#"|"b"],[chord_tensions],[("/"|"on"),note];
- chord_tensions = chord_tension,[",",chord_tension];
- chord_tension = (["+"|"-"],"7"|"9"|"13"|"6"|"5")|("sus4"|"aug"|"dim");
-  inline_space = " "|"\t";
- inline_spaces = inline_space,{inline_space};
-  
- space = inline_space | "\n" | "\r";
- ignorelable_spaces = space, {space}; 
- 
- any_string_excluding_dq = "a"|"b"|"c";
- any_string_excluding_sq = "a"|"b"|"c";
-	  
-*/
 	this.context = {line:0, char:0};
 	this.error_msg_callback = error_msg_callback;
 }
@@ -807,7 +777,8 @@ var TOKEN_SLASH =  21; // "\/"
 var TOKEN_NL = 22; // \n"
 var TOKEN_PERCENT = 23;
 var TOKEN_EQUAL = 24;
-var TOKEN_STRING = 25;
+var TOKEN_STRING = 25;    // String with double quote
+var TOKEN_STRING_SQ = 26; // String with single quote
 
 var WORD_DEFINIITON_GENERAL = /^(\w[\w\.\,\-\+\#\:]*)/;
 var WORD_DEFINITION_IN_REHARSAL_MARK = /^[^\[\]]*/;
@@ -854,7 +825,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		if(!strclosed) this.onParseError("ERROR_WHILE_PARSING_PLAIN_STRING");
 		s = s.substr(1);
 		
-		return {token:plain_str, s:s, type:TOKEN_STRING, ss:skipped_spaces};
+		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : TOKEN_STRING_SQ), ss:skipped_spaces};
 	}
 		
 	var r = charIsIn(s[0], '[]<>(){},\n\/%=');
@@ -1146,6 +1117,10 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 		switch(r.type){
 		case TOKEN_STRING:
 			measure.elements.push(new Chord(r.token));
+			s = r.s;
+			break;
+		case TOKEN_STRING_SQ:
+			measure.elements.push(new Comment(r.token));
 			s = r.s;
 			break;
 		case TOKEN_WORD:
@@ -1773,6 +1748,8 @@ function classifyElements(measure)
 				footer_elements.push(e);
 			}else if(e instanceof Fine){
 				footer_elements.push(e);
+			}else if(e instanceof Comment){
+				header_elements.push(e);
 			}
 		}
 		
@@ -2642,7 +2619,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		for(var ei = 0; ei < m.elements.length; ++ei)
 		{
 			var e = m.elements[ei];
-			if(e instanceof Coda || e instanceof Segno){
+			if(e instanceof Coda || e instanceof Segno || e instanceof Comment){
 				mh_area_detected = true;
 			}else if(e instanceof Chord){
 				rs_area_detected |= (e.length_s !== null);
@@ -2672,6 +2649,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		var meas_base_x = x;   // Start of this measure including boundary
 		var meas_start_x = x;  // Start of this measure excluding boundary
 		var meas_end_x = x;    // End of this measure
+		var mh_offset = 0; // Offset x in mh region
 		
 		var elements = classifyElements(m);
 		
@@ -2685,12 +2663,20 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			if(e instanceof Coda){
 				m_mh_area_detected = true;
 				if(draw){
-					draw_coda(paper, meas_base_x, y_base, "lt", e);
+					var g = draw_coda(paper, meas_base_x + mh_offset, y_base, "lt", e);
+					mh_offset += g.getBBox().width;
 				}
 			}else if(e instanceof Segno){
 				m_mh_area_detected = true;
 				if(draw){
-					draw_segno(paper, meas_base_x, y_base + 3, e);
+					var g = draw_segno(paper, meas_base_x + mh_offset, y_base + 3, e);
+					mh_offset += g.getBBox().width;
+				}
+			}else if(e instanceof Comment){
+				m_mh_area_detected = true;
+				if(draw){
+					var g = raphaelText(paper, meas_base_x + mh_offset, y_base + subheader_height, e.comment, 15, "lb");
+					mh_offset += g.getBBox().width;
 				}
 			}
 		}
@@ -3289,6 +3275,7 @@ function draw_coda(paper, x, y, align, coda)
 	group.transform("t"+x+","+(y-2));
 	return group;
 }
+
 
 return {
 	Parser: Parser,

@@ -460,6 +460,8 @@ function Chord(chord_str)
 	this.tie = false;
 	
 	this.renderprop = {};
+	
+	this.exceptinal_comment = null;
 
 	// Analyze Chord symbol
 	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(?:\/(A|B|C|D|E|F|G)(#|b)?)?)(:(\d+)(\.*))?(\~)?/;
@@ -501,6 +503,10 @@ function Chord(chord_str)
 	}
 }
 
+Chord.prototype.setException = function(exceptional_comment)
+{
+	this.exceptinal_comment = exceptional_comment;
+}
 
 
 Chord.getTranpsoedNote = function(transpose, half_type, note_base, sharp_flat)
@@ -724,11 +730,11 @@ Fine.prototype.toString = function(){
 	return "Fine";
 };
 
-function Comment(comment)
+function Comment(comment, chorddep)
 {
 	this.comment = comment;
+	this.chorddep = chorddep; // Dependency for particular chord : true/false
 }
-
 
 function Parser(error_msg_callback)
 {
@@ -779,6 +785,7 @@ var TOKEN_PERCENT = 23;
 var TOKEN_EQUAL = 24;
 var TOKEN_STRING = 25;    // String with double quote
 var TOKEN_STRING_SQ = 26; // String with single quote
+var TOKEN_ATMARK = 30; // @
 
 var WORD_DEFINIITON_GENERAL = /^(\w[\w\.\,\-\+\#\:]*)/;
 var WORD_DEFINITION_IN_REHARSAL_MARK = /^[^\[\]]*/;
@@ -828,7 +835,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : TOKEN_STRING_SQ), ss:skipped_spaces};
 	}
 		
-	var r = charIsIn(s[0], '[]<>(){},\n\/%=');
+	var r = charIsIn(s[0], '[]<>(){},\n\/%=@');
 	if(r != null){
 		return {token: s[0], s: s.substr(1), ss:skipped_spaces,
 			type: [
@@ -837,7 +844,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 				TOKEN_BRACKET_LR, TOKEN_BRACKET_RR,
 				TOKEN_BRACKET_LW, TOKEN_BRACKET_RW,
 				TOKEN_COMMA, TOKEN_NL, TOKEN_SLASH,
-				TOKEN_PERCENT, TOKEN_EQUAL][r.index]
+				TOKEN_PERCENT, TOKEN_EQUAL, TOKEN_ATMARK][r.index]
 		};
 	}
 	
@@ -1112,6 +1119,8 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 		measure.elements.push(new MeasureBoundaryFinMark());
 	
 	var loop_flg = true;
+	var atmark_detected = false;
+	var associated_chord = null;
 	while(loop_flg){
 		var r = this.nextToken(s);
 		switch(r.type){
@@ -1120,7 +1129,21 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 			s = r.s;
 			break;
 		case TOKEN_STRING_SQ:
-			measure.elements.push(new Comment(r.token));
+			var comment = new Comment(r.token, atmark_detected);
+			if(atmark_detected){
+				associated_chord.setException(comment);
+				atmark_detected = false;
+				associated_chord = null;
+			}
+			measure.elements.push(comment);
+			s = r.s;
+			break;
+		case TOKEN_ATMARK:
+			var a_chord = measure.elements[measure.elements.length-1];
+			if(!(a_chord instanceof Chord))
+				throw "ATMARK_NOT_AFTER_CHORD_SYMBOL";
+			associated_chord = a_chord;
+			atmark_detected = true;
 			s = r.s;
 			break;
 		case TOKEN_WORD:
@@ -1750,6 +1773,11 @@ function classifyElements(measure)
 				footer_elements.push(e);
 			}else if(e instanceof Comment){
 				header_elements.push(e);
+			}else if(e instanceof ArMark){
+				// Associate the Chord and Comment symbols here
+				var chord = m.elements[ei-1];
+				var comment = m.elements[ei+1];
+				
 			}
 		}
 		
@@ -2675,8 +2703,11 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			}else if(e instanceof Comment){
 				m_mh_area_detected = true;
 				if(draw){
-					var g = raphaelText(paper, meas_base_x + mh_offset, y_base + subheader_height, e.comment, 15, "lb");
-					mh_offset += g.getBBox().width;
+					// If this comment is associated with a chord with exceptional comment, not rendered here.
+					if (!e.chorddep){
+						var g = raphaelText(paper, meas_base_x + mh_offset, y_base + subheader_height, e.comment, 15, "lb");
+						mh_offset += g.getBBox().width;
+					}
 				}
 			}
 		}
@@ -2759,6 +2790,11 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			if(e instanceof Chord){
 				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
 						param, draw, chord_space, x_global_scale, m.body_scaling);
+				if(e.exceptinal_comment !== null){
+					if(draw)
+						var g = raphaelText(paper, x, y_base + subheader_height, 
+							e.exceptinal_comment.comment, 15, "lb");
+				}
 				x = cr.x;
 				if(!isFinite(x)){
 					console.log("Illegal calculation of x is detected");

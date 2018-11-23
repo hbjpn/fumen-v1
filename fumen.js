@@ -568,51 +568,6 @@ Chord.prototype.getChordStrBase = function(tranpose, half_type)
 	return [tranposed_note, transposed_base_note];
 };
 
-Chord.prototype.getChordStr = function(tranpose, half_type)
-{
-	if(!this.is_valid_chord)
-		return [false,this.chord_str]; // Not chord or invalid chord notation
-	
-	var tranposed_note = null;
-	if(this.note_base !== undefined)
-		tranposed_note = Chord.getTranpsoedNote(tranpose, half_type, this.note_base, this.sharp_flat);
-	var transposed_base_note = null;
-	if(this.base_note_base !== undefined){
-		transposed_base_note = Chord.getTranpsoedNote(tranpose, half_type, this.base_note_base, this.base_sharp_flat);
-	}
-	
-	// Assuming font mapping
-	var mid_str = "";
-	if(this.mid_elems !== null){
-		for(var i = 0; i < this.mid_elems.length; ++i){
-			switch(this.mid_elems[i].cs){
-				case CS_M:
-					var s = this.mid_elems[i].s; 
-					var isMaj = (s == "M" || s.toLowerCase() == "maj" || s.toLowerCase() == "ma");
-					mid_str += (isMaj ? 'M' : 'm');
-					break;
-				case CS_DIG:
-					var m = {"11":"\x25","13":"\x26"};
-					if(this.mid_elems[i].s in m)
-						mid_str += m[this.mid_elems[i].s];
-					else
-						mid_str += this.mid_elems[i].s;
-					break;
-				case CS_SUS: mid_str += 's'+this.mid_elems[i].s.substr(3);	break;
-				case CS_DIM: mid_str += 'd'; break;
-				case CS_MNS: mid_str += 'b'+this.mid_elems[i].s.substr(1);	break;
-				case CS_PLS: mid_str += '#'+this.mid_elems[i].s.substr(1);	break;
-				case CS_ADD: mid_str += 'a'+this.mid_elems[i].s.substr(3);  break;
-				case CS_ALT: mid_str += this.mid_elems[i].s; break;
-				case CS_SEP: mid_str += this.mid_elems[i].s; break;
-			}
-		}
-	}
-	
-	var refs = (tranposed_note ? tranposed_note + mid_str : "") + ( transposed_base_note ? ("/"+transposed_base_note) : "" );
-	return [true,refs];
-};
-
 function LoopIndicator(indicators)
 {
 	// Note : Content of indicators are not always integers.
@@ -2127,12 +2082,9 @@ function render_chord_as_string(chord, transpose, half_type, paper, x, y_body_ba
 {
 	var row_height = param.row_height;
 
-	var csi = chord.getChordStr(transpose, half_type);
-	
 	var group = paper.set();
 	
-	var text = raphaelText(paper, x, y_body_base + row_height/2, csi[1], 16, "lc", (csi[0]?"icomoon":null));
-	//text.attr({'font-family':'icomoon'});
+	var text = raphaelText(paper, x, y_body_base + row_height/2, chord.chord_str, 16, "lc", null);
 	x += text.getBBox().width * x_global_scale * body_scaling;
 	x += (chord_space*body_scaling);
 	if(!draw) text.remove();
@@ -2149,43 +2101,118 @@ var ChordRenderBuffer = {
 /**
  * Chord rendering profile
  */
-var _3rd_global_dy = 0;
-var _3rd_font_profile = {
-	'M'   : function(p){return [[16,-7,'M']];},
-	'm'   : function(p){return [[16,-7,'m']];}
-};
-var _6791113_global_dy = 0;
-var _6791113_font_profile = {
-	'dim' : function(p){return [[16,-7,"d"]];},
-	'sus' : function(p){return [[18,-9,"s"],[13,-2,p?p:""]];},
-	'M'   : function(p){return [[16,-7,"M"],[13,-2,p?p:""]];},
-	'm'   : function(p){return [[16,-7,"m"]];},
-	'add' : function(p){return [[20,-10,"a"],[13,-2,p?p:""]];},
-	'dig' : function(p){
-			if(!p) p = "";
-			else if(p=="11") p = "\x25";
-			else if(p=="13") p = "\x26";
-			return [[13,-2,p]];
-		}
-};
-var _5th_global_dy = 0;
-var _5th_font_profile = {
-	'#'   : function(p){return [[13,-2,'+'],[13,-2,p]];},
-    'b'   : function(p){return [[13,-2,'-'],[13,-2,p]];},
-    'dig' : function(p){return [[13,-2,p]];}
-};
-var _altered_global_dy = 0;
-var _altered_font_profile = {
-	'#'   : function(p){return [[13,-2,'#'],[13,-2,p]];},
-    'b'   : function(p){return [[13,-2,'b'],[13,-2,p]];},
-    'alt' : function(p){return [[13,-2,'alt']];}
+var CHORD_RENDER_THEME = {
+/*"icomoon":{
+	"base_font_size" : 18,
+	"_3rd_global_dy" : 0,
+	"_3rd_font_profile" : {
+		'M'   : function(p){return [[16,-7,'M']];},
+		'm'   : function(p){return [[16,-7,'m']];}
+	},
+	"_6791113_global_dy" : 0,
+	"_6791113_font_profile" : {
+		'dim' : function(p){return [[16,-7,"d"]];},
+		'sus' : function(p){return [[18,-9,"s"],[13,-2,p?p:""]];},
+		'M'   : function(p){return [[16,-7,"M"],[13,-2,p?p:""]];},
+		'm'   : function(p){return [[16,-7,"m"]];},
+		'add' : function(p){return [[20,-10,"a"],[13,-2,p?p:""]];},
+		'dig' : function(p){
+				if(!p) p = "";
+				else if(p=="11") p = "\x25";
+				else if(p=="13") p = "\x26";
+				return [[13,-2,p]];
+			}
+	},
+	"_5th_global_dy" : 0,
+	"_5th_font_profile" : {
+		'#'   : function(p){return [[13,-2,'+'],[13,-2,p]];},
+		'b'   : function(p){return [[13,-2,'-'],[13,-2,p]];},
+		'dig' : function(p){return [[13,-2,p]];}
+	},
+	"_altered_global_dy" : 0,
+	"_altered_font_profile" : {
+		'#'   : function(p){return [[13,-2,'#'],[13,-2,p]];},
+		'b'   : function(p){return [[13,-2,'b'],[13,-2,p]];},
+		'alt' : function(p){return [[13,-2,'alt']];}
+	}
+},*/
+"Default":{
+	"_base_font_size" : 18,
+	"_base_font_family" : "icomoon",
+	"_3rd_global_dy" : 2,
+	"_3rd_font_profile" : {
+		'M'   : function(p){return [[16,0,'M']];},
+		'm'   : function(p){return [[16,0,'m']];}
+	},
+	"_6791113_global_dy" : 2,
+	"_6791113_font_profile" : {
+		'dim' : function(p){return [[16,0,"d"]];},
+		'sus' : function(p){return [[18,0,"s"],[13,4,p?p:""]];},
+		'M'   : function(p){return [[16,0,"M"],[13,4,p?p:""]];},
+		'm'   : function(p){return [[16,0,"m"]];},
+		'add' : function(p){return [[20,0,"a"],[13,4,p?p:""]];},
+		'dig' : function(p){
+				if(!p) p = "";
+				else if(p=="11") p = "\x25";
+				else if(p=="13") p = "\x26";
+				return [[13,4,p]];
+			}
+	},
+	"_5th_global_dy" : -8,
+	"_5th_font_profile" : {
+		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
+		'dig' : function(p){return [[13,0,p]];}
+	},
+	"_altered_global_dy" : -8,
+	"_multi_altered_margin" : 0,
+	"_altered_font_profile" : {
+		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
+		'alt' : function(p){return [[13,0,'alt']];}
+	}
+},
+"Arial":{
+	"_base_font_size" : 18,
+	"_base_font_family" : "Arial",
+	"_3rd_global_dy" : 0,
+	"_3rd_font_profile" : {
+		'M'   : function(p){return [[16,0,'M']];},
+		'm'   : function(p){return [[16,0,'m']];}
+	},
+	"_6791113_global_dy" : 0,
+	"_6791113_font_profile" : {
+		'dim' : function(p){return [[16,0,"dim"]];},
+		'sus' : function(p){return [[16,0,"sus"],[13,4,p?p:""]];},
+		'M'   : function(p){return [[16,0,"M"],[13,4,p?p:""]];},
+		'm'   : function(p){return [[16,0,"m"]];},
+		'add' : function(p){return [[16,0,"add"],[13,4,p?p:""]];},
+		'dig' : function(p){
+				if(!p) p = "";
+				//else if(p=="11") p = "\x25";
+				//else if(p=="13") p = "\x26";
+				return [[13,4,p]];
+			}
+	},
+	"_5th_global_dy" : -6,
+	"_5th_font_profile" : {
+		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
+		'dig' : function(p){return [[13,0,p]];}
+	},
+	"_altered_global_dy" : -6,
+	"_multi_altered_margin" : -4,
+	"_altered_font_profile" : {
+		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
+		'alt' : function(p){return [[13,0,'alt']];}
+	}
+}
 };
 
 function render_chord(chord, transpose, half_type, paper, x, y_body_base,
-		param, draw, chord_space, x_global_scale, body_scaling)
-{	
-	var fontfamily = "icomoon";
-	
+		param, draw, chord_space, x_global_scale, body_scaling, theme)
+{
 	var row_height = param.row_height;
 	
 	chord.renderprop.x = x;
@@ -2215,7 +2242,6 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	
 	var bases = chord.getChordStrBase(transpose, half_type);
 	var elems = chord.mid_elem_objs;
-	//var csi = e.getChordStr(transpose, half_type);
 	var group = paper.set();
 
 	var _3rdelem = [];
@@ -2268,20 +2294,23 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	var text = null;
 	var xl = x;
 	
+	var fp = CHORD_RENDER_THEME[theme];
+	var fontfamily = fp["_base_font_family"];
+	
 	if(bases[0]){
-		text = raphaelText(paper, xl, y_body_base + row_height/2, bases[0], 18, "lc", fontfamily);
+		text = raphaelText(paper, xl, y_body_base + row_height/2, bases[0], fp["_base_font_size"], "lc", fontfamily);
 		group.push(text);
-		xl += text.getBBox().width;
+		xl += text.getBBox().width	;
 	}
 	
 	var wb3 = 0;
 	if(_3rdelem.length > 0){
-		var rp = _3rd_font_profile[_3rdelem[0].type](_3rdelem[0].param);
+		var rp = fp["_3rd_font_profile"][_3rdelem[0].type](_3rdelem[0].param);
 		var tx = 0;
 		for(var i = 0; i < rp.length; ++i){
 			text = raphaelText(paper, xl + tx,
-					y_body_base + row_height/2 + rp[i][1] + _3rd_global_dy,
-					rp[i][2], rp[i][0], "lt", fontfamily);
+					y_body_base + row_height/2 + rp[i][1] + fp["_3rd_global_dy"],
+					rp[i][2], rp[i][0], "lc", fontfamily);
 			group.push(text);
 			tx += text.getBBox().width;
 		}
@@ -2290,12 +2319,12 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	var wbupper = 0;
 	
 	if(_5thelem.length > 0){
-		var rp = _5th_font_profile[_5thelem[0].type](_5thelem[0].param);
+		var rp = fp["_5th_font_profile"][_5thelem[0].type](_5thelem[0].param);
 		var tx = 0;
 		for(var i = 0; i < rp.length; ++i){
 			text = raphaelText(paper, xl + tx,
-					y_body_base + row_height/2 + rp[i][1] + _5th_global_dy,
-					rp[i][2], rp[i][0], "lb", fontfamily);
+					y_body_base + row_height/2 + rp[i][1] + fp["_5th_global_dy"],
+					rp[i][2], rp[i][0], "lc", fontfamily);
 			group.push(text);
 			tx += text.getBBox().width;
 		}
@@ -2306,13 +2335,13 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	if(_6791113suselem.length > 0){
 		var tx = 0;
 		for(var n = 0; n < _6791113suselem.length; ++n){
-			var rp= _6791113_font_profile[_6791113suselem[n].type](_6791113suselem[n].param);
+			var rp= fp["_6791113_font_profile"][_6791113suselem[n].type](_6791113suselem[n].param);
 			for(var i = 0; i < rp.length; ++i){
 				if(rp[i][2] == "") continue;
 				text = raphaelText(paper,
 						xl + wb3 + tx,
-						y_body_base + row_height/2 + rp[i][1] + _6791113_global_dy,
-						rp[i][2], rp[i][0], "lt", fontfamily);
+						y_body_base + row_height/2 + rp[i][1] + fp["_6791113_global_dy"],
+						rp[i][2], rp[i][0], "lc", fontfamily);
 				tx += text.getBBox().width;
 				group.push(text);
 			}
@@ -2324,29 +2353,35 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	var aw = 0;
 	var ah = 0; // Offset of y
 	var a_min_y = 10000;
+	var a_max_y = -10000;
 	var brace_margin = 5;
+	var multi_altered_margin = fp["_multi_altered_margin"];
 	for(var i = 0; i < _alteredelem.length; ++i){
 		var e = _alteredelem[i];
-		var rp = _altered_font_profile[e.type](e.param);
+		var rp = fp["_altered_font_profile"][e.type](e.param);
 		var tw = 0, th = 0;
 		for(var k = 0; k < rp.length; ++k){
-			a_min_y = Math.min(a_min_y, y_body_base + ah + rp[k][1] + _altered_global_dy);
 			text = raphaelText(paper,
 					xl + brace_margin + tw,
-					y_body_base + ah + rp[k][1] + _altered_global_dy,
-					rp[k][2], rp[k][0], "lt", fontfamily);
+					y_body_base + row_height/2 + ah + rp[k][1] + fp["_altered_global_dy"],
+					rp[k][2], rp[k][0], "lc", fontfamily);
 			group.push(text);
 			tw += text.getBBox().width;
 			th = Math.max(th, text.getBBox().height);
+			//a_min_y = Math.min(a_min_y, y_body_base + row_height/2 + ah + rp[k][1] + fp["_altered_global_dy"]);
+			a_min_y = Math.min(a_min_y, text.getBBox().y);
+			a_max_y = Math.max(a_max_y, text.getBBox().y + text.getBBox().height);
 		}
-		ah += (th+1);
+		ah += (th+multi_altered_margin);
 		aw = Math.max(aw, tw);
 	}
 	if(_alteredelem.length > 0){
-		var brace_points_l = [[xl + brace_margin, a_min_y], [xl, a_min_y], [xl, a_min_y+ah], [xl + brace_margin, a_min_y+ah]];
+		var brace_points_l = [[xl + brace_margin, a_min_y], [xl, a_min_y], 
+			[xl, a_max_y], [xl + brace_margin, a_max_y]];
 		var bl = paper.path(svgArcBezie(brace_points_l)).attr('stroke-width','1px');
 		
-		var brace_points_r = [[xl + brace_margin+aw, a_min_y], [xl+brace_margin+aw+5, a_min_y], [xl+brace_margin+aw+5, a_min_y+ah], [xl+brace_margin+aw, a_min_y+ah]];
+		var brace_points_r = [[xl + brace_margin+aw, a_min_y], [xl+brace_margin+aw+5, a_min_y], 
+			[xl+brace_margin+aw+5, a_max_y], [xl+brace_margin+aw, a_max_y]];
 		var br = paper.path(svgArcBezie(brace_points_r)).attr('stroke-width','1px');
 		
 		group.push(bl);
@@ -2361,7 +2396,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		text = raphaelText(paper, xl, y_body_base + row_height/2, "/", 26, "lc");
 		group.push(text);
 		xl += text.getBBox().width;
-		text = raphaelText(paper, xl, y_body_base + row_height/2, bases[1], 18, "lc", fontfamily);
+		text = raphaelText(paper, xl, y_body_base + row_height/2, bases[1], fp["_base_font_size"], "lc", fontfamily);
 		group.push(text);
 		xl += text.getBBox().width;
 	}
@@ -2626,7 +2661,7 @@ function new_row_yinfo()
 }
 
 function render_measure_row(paper, x_global_scale, transpose, half_type,
-		row_elements_list, prev_measure, next_measure, y_base, param, draw, staff)
+		row_elements_list, prev_measure, next_measure, y_base, param, draw, staff, theme)
 {
 	/* Reference reserved width for empty measures */
 	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "icomoon");
@@ -2789,7 +2824,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			
 			if(e instanceof Chord){
 				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
-						param, draw, chord_space, x_global_scale, m.body_scaling);
+						param, draw, chord_space, x_global_scale, m.body_scaling, theme);
 				if(e.exceptinal_comment !== null){
 					if(draw)
 						var g = raphaelText(paper, x, y_base + subheader_height, 
@@ -2975,6 +3010,16 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 function getGlobalMacros(track)
 {
 	var macros_to_apply = {};
+
+	macros_to_apply.title = "NO TITLE";
+	if( "TITLE" in track.macros ){
+		macros_to_apply.title = track.macros["TITLE"];
+	}
+
+	macros_to_apply.artist = "NO ARTIST";
+	if( "ARTIST" in track.macros ){
+		macros_to_apply.artist = track.macros["ARTIST"];
+	}
 	
 	macros_to_apply.x_global_scale = 1.0;
 	if( "XSCALE" in track.macros ){
@@ -3005,6 +3050,12 @@ function getGlobalMacros(track)
 	if( "ROW_MARGIN" in track.macros)
 	{
 		macros_to_apply.row_margin = parseInt(track.macros["ROW_MARGIN"]);
+	}
+	
+	macros_to_apply.theme = "Default";
+	if( "THEME" in track.macros)
+	{
+		macros_to_apply.theme = track.macros["THEME"];
 	}
 	
 	return macros_to_apply;
@@ -3056,7 +3107,10 @@ function Initialize()
 	// Pre-load web-fonts because BBox of the fonts can not be correctly retrieved
 	// for the first-rendered fonts. This may be a browser bug ?
 	var paper = makeDammyPaper();
-	var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt","icomoon");
+	var FONT_FAMILIES=["icomoon","Arial"]; // List all the fonts used
+	for(var i=0; i < FONT_FAMILIES.length; ++i){
+		var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt",FONT_FAMILIES[i]);
+	}
 	removeDammyPaper();
 }
 
@@ -3079,22 +3133,17 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		
 	var y_base = param.y_first_page_offset;
 	
-	var songname = "No Name";
-
-	// Title
-	if( "TITLE" in track.macros )
-	{
-		if(draw) raphaelText(paper, x_offset + width/2, y_title_offset, track.macros["TITLE"], 24, "ct"); 
-		songname = track.macros["TITLE"];
-	}
-	
-	if( "ARTIST" in track.macros )
-	{
-		if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, track.macros["ARTIST"], 14, "rt"); 		
-		songname += ("/"+track.macros["ARTIST"]);
-	}
+	var songname = "";
 
 	var global_macros = getGlobalMacros(track);
+
+	// Title
+	if(draw) raphaelText(paper, x_offset + width/2, y_title_offset, global_macros.title, 24, "ct"); 
+	songname = global_macros.title;
+
+	// Artist
+	if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt"); 		
+	songname += ("/"+global_macros.artist);
 	
 	// Apply for rendering parameter if specified by global macros
 	if (global_macros.row_margin !== null)
@@ -3197,7 +3246,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose, 
 							yse.macros.half_type, row_elements_list, yse.pm, yse.nm,
 							ctx2.y_base, ctx2.param, ctx2.draw,
-							yse.macros.staff);
+							yse.macros.staff, global_macros.theme);
 					ctx2.y_base = r.y_base;
 				}
 				
@@ -3251,7 +3300,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							paper, yse[pei].macros.x_global_scale, yse[pei].macros.transpose,
 							yse[pei].macros.half_type, row_elements_list, 
 							yse[pei].pm, yse[pei].nm,
-							y_base, param, draw, yse[pei].macros.staff);
+							y_base, param, draw, yse[pei].macros.staff, global_macros.theme);
 					y_base = r.y_base;
 				}
 			}

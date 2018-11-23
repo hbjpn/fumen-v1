@@ -2173,34 +2173,34 @@ var CHORD_RENDER_THEME = {
 	}
 },
 "Arial":{
-	"_base_font_size" : 18,
+	"_base_font_size" : 20,
 	"_base_font_family" : "Arial",
-	"_3rd_global_dy" : 0,
+	"_3rd_global_dy" : 1,
 	"_3rd_font_profile" : {
-		'M'   : function(p){return [[16,0,'M']];},
-		'm'   : function(p){return [[16,0,'m']];}
+		'M'   : function(p){return [[15,0,'M']];},
+		'm'   : function(p){return [[15,0,'m']];}
 	},
-	"_6791113_global_dy" : 0,
+	"_6791113_global_dy" : 1,
 	"_6791113_font_profile" : {
-		'dim' : function(p){return [[16,0,"dim"]];},
-		'sus' : function(p){return [[16,0,"sus"],[13,4,p?p:""]];},
-		'M'   : function(p){return [[16,0,"M"],[13,4,p?p:""]];},
-		'm'   : function(p){return [[16,0,"m"]];},
-		'add' : function(p){return [[16,0,"add"],[13,4,p?p:""]];},
+		'dim' : function(p){return [[15,0,"dim"]];},
+		'sus' : function(p){return [[15,0,"sus"],[13,2,p?p:""]];},
+		'M'   : function(p){return [[15,0,"M"],[13,2,p?p:""]];},
+		'm'   : function(p){return [[15,0,"m"]];},
+		'add' : function(p){return [[15,0,"add"],[13,2,p?p:""]];},
 		'dig' : function(p){
 				if(!p) p = "";
 				//else if(p=="11") p = "\x25";
 				//else if(p=="13") p = "\x26";
-				return [[13,4,p]];
+				return [[13,3,p]];
 			}
 	},
-	"_5th_global_dy" : -6,
+	"_5th_global_dy" : -7,
 	"_5th_font_profile" : {
 		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
 		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
 		'dig' : function(p){return [[13,0,p]];}
 	},
-	"_altered_global_dy" : -6,
+	"_altered_global_dy" : -7,
 	"_multi_altered_margin" : -4,
 	"_altered_font_profile" : {
 		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},

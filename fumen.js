@@ -330,7 +330,8 @@ function Track()
 function ReharsalGroup()
 {
 	this.name = null;
-	this.measures = new Array();
+//	this.measures = new Array();
+	this.blocks = new Array(); // Blocks in the reharsal groups
 	this.macros = {};
 }
 
@@ -1168,7 +1169,7 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 	return {measure: measure, s:s};
 };
 
-Parser.prototype.parseMeasures = function(trig_token_obj, s)
+Parser.prototype.parseMeasures = function(trig_token_obj, s, double_line_break)
 {
 	// prerequisite :
 	//   trig_token_obj == "|" or "||" or "||:" with params
@@ -1256,12 +1257,17 @@ Parser.prototype.parse = function(s)
 	var track = new Track();
 	
 	var currentReharsalGroup = null;
+	var currentBlock = null;
 	
 	while(true){
 		r = this.nextToken(s);
 		//console.log(r);
 		if(r.type == TOKEN_END) break;
-		else{
+		
+		if(r.type == TOKEN_NL){
+			this.context.line += 1;
+			this.context.contiguous_line_break += 1;
+		}else{
 			if(r.type == TOKEN_BRACKET_LS){
 				r = this.parseReharsalMark(r.token, r.s);
 				//console.log("Reharsal Mark:"+r.reharsalMarkName);
@@ -1271,8 +1277,20 @@ Parser.prototype.parse = function(s)
 				currentReharsalGroup.name = r.reharsalMarkName;
 			}else if([TOKEN_MB, TOKEN_MB_DBL, TOKEN_MB_LOOP_BEGIN, TOKEN_MB_LOOP_BOTH, TOKEN_MB_FIN].indexOf(r.type) >= 0){
 				r = this.parseMeasures(r, r.s);
-				currentReharsalGroup.measures =
-					currentReharsalGroup.measures.concat(r.measures);
+				if( currentReharsalGroup.blocks.length == 0 ){
+					currentReharsalGroup.blocks.push(new Array());
+					currentReharsalGroup.blocks[0] =
+						currentReharsalGroup.blocks[0].concat(r.measures);
+				}else{
+					if(this.context.contiguous_line_break >= 2){
+						currentReharsalGroup.blocks.push(new Array());
+					}
+					var blocklen = currentReharsalGroup.blocks.length;
+					currentReharsalGroup.blocks[blocklen-1] =
+						currentReharsalGroup.blocks[blocklen-1].concat(r.measures);
+				}
+				//currentReharsalGroup.measures =
+				//	currentReharsalGroup.measures.concat(r.measures);
 			}else if(r.type == TOKEN_PERCENT){
 				// Expression
 				r = this.parseMacro(r.s);
@@ -1282,13 +1300,14 @@ Parser.prototype.parse = function(s)
 					track.macros[r.key] = r.value;
 				}
 			}else if(r.type == TOKEN_NL){
-				this.context.line += 1;
+				// Process will be done in the if statement below
 			}else{
 				console.log(r.token);
 				this.onParseError("ERROR_WHILE_PARSE_MOST_OUTSIDER");
 			}
-			s = r.s;
+			this.context.contiguous_line_break = 0;
 		}
+		s = r.s;
 		loop_cnt++;
 		if(loop_cnt >= 1000) break;
 	}
@@ -1389,22 +1408,27 @@ function Sequencer(track, cb_play, cb_stop, param)
 	
 	 
 	// Analyze musical structure
-	var ctx = { rgi: 0, mi: -1};
+	var ctx = { rgi: 0, bi: 0, mi: -1};
 	var at = function(c){
-		return track.reharsal_groups[c.rgi].measures[c.mi];
+		return track.reharsal_groups[c.rgi].blocks[c.bi][c.mi];
 	};
 	var next = function(c){
 		do {
 			if(c.rgi >= track.reharsal_groups.length)
 				return null;
-			if(c.mi >= track.reharsal_groups[c.rgi].measures.length){
+			c.mi++;
+			if(c.mi >= track.reharsal_groups[c.rgi].blocks[c.bi].length){
 				c.mi = 0;
-				c.rgi++;
-			}else{
-				c.mi++;
+				c.bi++;
+				if(c.bi >= track.reharsal_groups[c.rgi].blocks.length){
+					c.bi = 0;
+					c.rgi++;
+					if(c.rgi >= track.reharsal_groups.length)
+						return null;
+				}
 			}
-			if(c.rgi < track.reharsal_groups.length && c.mi < track.reharsal_groups[c.rgi].measures.length)
-				return track.reharsal_groups[c.rgi].measures[c.mi];
+			//if(c.rgi < track.reharsal_groups.length && c.mi < track.reharsal_groups[c.rgi].measures.length)
+			return track.reharsal_groups[c.rgi].blocks[c.bi][c.mi];
 		} while( true );
 	};
 	
@@ -1765,6 +1789,7 @@ function maxtor(array, indexer, functor)
 	return maxv;
 }
 
+// This function is called right after screening is done.
 function identify_scaling(track, param)
 {
 	console.log("Identify scaling called");
@@ -1773,121 +1798,126 @@ function identify_scaling(track, param)
 	for(var i = 0; i < track.reharsal_groups.length; ++i)
 	{
 		var rg = track.reharsal_groups[i];
-
-		var currentSumWidth = 0;
 		
-		var rows = new Array();
-		var row_measures = new Array();
+		for( var bi = 0; bi < rg.blocks.length; ++bi){
 		
-		var vertical_align = true;
-		var force_even_measures_per_line = true;
-		if(vertical_align){
-			// Estimate optimized TR line-break point
-			// Decide where to insert line-break
-			var maxC = 0;
-			for(var ml = 0; ml < rg.measures.length; ++ml){
-				maxC = ml+1;
-				var m = rg.measures[ml];		
-				currentSumWidth += (m.header_width + m.body_width + m.footer_width);
-				//console.log(m.header_width + "/" + m.body_width + "/" + m.footer_width + ":" + currentSumWidth + " vs " + width);			
-				if(currentSumWidth > width){ maxC--; break; }
-			}
-			
-			//console.log("maxC = " + maxC);
-			var N = rg.measures.length;
-			var C = maxC;
-			var meas_max_widths = new Array();
-			var Q_w_for_C = 0;
-			for(; C > 0; --C){
-				for(var c = 0; c < C; ++c){			
-					var max_w_for_c = maxtor(rg.measures, function(r){ return r*C+c; }, function(m){ return m.header_width + m.body_width + m.footer_width;});
-					Q_w_for_C += max_w_for_c;
-					meas_max_widths.push(max_w_for_c);
+			var block_measures = rg.blocks[bi];
+		
+			var currentSumWidth = 0;
+		
+			var rows = new Array();
+			var row_measures = new Array();
+		
+			var vertical_align = true;
+			var force_even_measures_per_line = true;
+			if(vertical_align){
+				// Estimate optimized TR line-break point
+				// Decide where to insert line-break
+				var maxC = 0;
+				for(var ml = 0; ml < block_measures.length; ++ml){
+					maxC = ml+1;
+					var m = block_measures[ml];		
+					currentSumWidth += (m.header_width + m.body_width + m.footer_width);
+					//console.log(m.header_width + "/" + m.body_width + "/" + m.footer_width + ":" + currentSumWidth + " vs " + width);			
+					if(currentSumWidth > width){ maxC--; break; }
 				}
-				// Semi-optimized selection : argmax{C} Q_w_for_C is optimzed but, here we choose maximum C where Q_w_for_C <= P_w
-				if(Q_w_for_C <= width)
-				{
-					// Even measures should be used, skip odd measures case except for C=1 or 1 line case
-					if(force_even_measures_per_line){
-						if(C % 2 == 0 || C == 1 || C == N) break;
+			
+				//console.log("maxC = " + maxC);
+				var N = block_measures.length;
+				var C = maxC;
+				var meas_max_widths = new Array();
+				var Q_w_for_C = 0;
+				for(; C > 0; --C){
+					for(var c = 0; c < C; ++c){			
+						var max_w_for_c = maxtor(block_measures, function(r){ return r*C+c; }, function(m){ return m.header_width + m.body_width + m.footer_width;});
+						Q_w_for_C += max_w_for_c;
+						meas_max_widths.push(max_w_for_c);
 					}
-					else
-						break;
+					// Semi-optimized selection : argmax{C} Q_w_for_C is optimzed but, here we choose maximum C where Q_w_for_C <= P_w
+					if(Q_w_for_C <= width)
+					{
+						// Even measures should be used, skip odd measures case except for C=1 or 1 line case
+						if(force_even_measures_per_line){
+							if(C % 2 == 0 || C == 1 || C == N) break;
+						}
+						else
+							break;
+					}
+					Q_w_for_C = 0;
+					meas_max_widths = new Array();
 				}
-				Q_w_for_C = 0;
-				meas_max_widths = new Array();
-			}
-			// Now, C is number of columns per row
-			// Q_w_for_C is width of the row when number of column is C, that is, sum of the maximum width measure of each columns.
-			// meas_max_widths is maximum width of the measures of each columns. Sum of meas_max_widths equals to Q_w_for_C.
+				// Now, C is number of columns per row
+				// Q_w_for_C is width of the row when number of column is C, that is, sum of the maximum width measure of each columns.
+				// meas_max_widths is maximum width of the measures of each columns. Sum of meas_max_widths equals to Q_w_for_C.
 			
-			// Additional scaling to variable of width of columns
-			var limitvariation = true;
-			if(limitvariation){
-				var sdratio = 0.75; // ratio of standard deviation. sigma_target/sigma. 0 means all the column bcomes the same width(average width).
-				var avg = 0.0;
-				for(var c = 0; c < C; ++c)
-					avg += meas_max_widths[c];
-				avg /= C;
-				Q_w_for_C = 0;
-				for(var c = 0; c < C; ++c){
-					meas_max_widths[c] = meas_max_widths[c] - ( meas_max_widths[c] - avg ) * ( 1 - sdratio );
-					Q_w_for_C += meas_max_widths[c];
+				// Additional scaling to variable of width of columns
+				var limitvariation = true;
+				if(limitvariation){
+					var sdratio = 0.75; // ratio of standard deviation. sigma_target/sigma. 0 means all the column bcomes the same width(average width).
+					var avg = 0.0;
+					for(var c = 0; c < C; ++c)
+						avg += meas_max_widths[c];
+					avg /= C;
+					Q_w_for_C = 0;
+					for(var c = 0; c < C; ++c){
+						meas_max_widths[c] = meas_max_widths[c] - ( meas_max_widths[c] - avg ) * ( 1 - sdratio );
+						Q_w_for_C += meas_max_widths[c];
+					}
 				}
-			}
 			
-			// Calculate new body width and scaling
-			var reharsal_wide_scaling = width / Q_w_for_C; 
-			for(var ml = 0; ml < rg.measures.length; ++ml){
-				var m = rg.measures[ml];
-				var row = Math.floor(ml / C);
-				var col = ml - row * C;
-				var new_body_width = meas_max_widths[col] * reharsal_wide_scaling - (m.header_width + m.footer_width);
-				m.new_line = ( col == 0 && row > 0 );
-				m.body_scaling = new_body_width / m.body_width; 
-			}
+				// Calculate new body width and scaling
+				var reharsal_wide_scaling = width / Q_w_for_C; 
+				for(var ml = 0; ml < block_measures.length; ++ml){
+					var m = block_measures[ml];
+					var row = Math.floor(ml / C);
+					var col = ml - row * C;
+					var new_body_width = meas_max_widths[col] * reharsal_wide_scaling - (m.header_width + m.footer_width);
+					m.new_line = ( col == 0 && row > 0 );
+					m.body_scaling = new_body_width / m.body_width; 
+				}
 			
-		}else{
-			// Decide where to insert line-break
-			for(var ml = 0; ml < rg.measures.length; ++ml){
-				var m = rg.measures[ml];
+			}else{
+				// Decide where to insert line-break
+				for(var ml = 0; ml < block_measures.length; ++ml){
+					var m = block_measures[ml];
 				
-				row_measures.push(m);			
-				currentSumWidth += (m.header_width + m.body_width + m.footer_width);
+					row_measures.push(m);			
+					currentSumWidth += (m.header_width + m.body_width + m.footer_width);
 				
-				if(currentSumWidth > width){
+					if(currentSumWidth > width){
+						rows.push(row_measures);
+						row_measures = new Array();
+						currentSumWidth = 0;
+					}
+				}
+				if( row_measures.length > 0 )
 					rows.push(row_measures);
-					row_measures = new Array();
-					currentSumWidth = 0;
-				}
-			}
-			if( row_measures.length > 0 )
-				rows.push(row_measures);
 			
-			// Decide scaling factor for each measure.
-			// Align measure boundary as much as possible.
-			for(var ri = 0; ri < rows.length; ++ri)
-			{
-				var sumWidth = 0;
-				var sumFixedWidth = 0;
+				// Decide scaling factor for each measure.
+				// Align measure boundary as much as possible.
+				for(var ri = 0; ri < rows.length; ++ri)
+				{
+					var sumWidth = 0;
+					var sumFixedWidth = 0;
 				
-				for(var ml = 0; ml < rows[ri].length; ++ml){
-					var m = rows[ri][ml];
-					if(ri > 0 && ml == 0) m.new_line = true;
-					sumWidth += (m.header_width + m.body_width + m.footer_width);
-					sumFixedWidth += (m.header_width + m.footer_width);
-				}
+					for(var ml = 0; ml < rows[ri].length; ++ml){
+						var m = rows[ri][ml];
+						if(ri > 0 && ml == 0) m.new_line = true;
+						sumWidth += (m.header_width + m.body_width + m.footer_width);
+						sumFixedWidth += (m.header_width + m.footer_width);
+					}
 				
-				var newSumBodyWidth = width - sumFixedWidth;
-				if(newSumBodyWidth <= 0) throw "ERROR";
+					var newSumBodyWidth = width - sumFixedWidth;
+					if(newSumBodyWidth <= 0) throw "ERROR";
 				
-				var scaling = newSumBodyWidth / ( sumWidth - sumFixedWidth );
-				for(var ml = 0; ml < rows[ri].length; ++ml){
-					var m = rows[ri][ml];
-					m.body_scaling = Math.min(param.max_scaling, scaling);
+					var scaling = newSumBodyWidth / ( sumWidth - sumFixedWidth );
+					for(var ml = 0; ml < rows[ri].length; ++ml){
+						var m = rows[ri][ml];
+						m.body_scaling = Math.min(param.max_scaling, scaling);
+					}
 				}
 			}
-		}				
+		}
 	}
 }
 
@@ -3164,24 +3194,27 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 			console.groupEnd();
 			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i]});
 			var rg = track.reharsal_groups[i];
-			var row_max_height = 0;
-			var meas_row = [];
-			var pm = null;
-			for(var ml = 0; ml < rg.measures.length; ++ml){
-				var m = rg.measures[ml];
-				if(m.new_line){
-					y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
-						nm:m,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros});
-					row_max_height = 0;
-					meas_row = [];
-					pm = ml>0?rg.measures[ml-1]:null;
+			for(var bi = 0; bi < rg.blocks.length; ++bi){
+				var block_measures = rg.blocks[bi];
+				var row_max_height = 0;
+				var meas_row = [];
+				var pm = null;
+				for(var ml = 0; ml < block_measures.length; ++ml){
+					var m = block_measures[ml];
+					if(m.new_line){
+						y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
+							nm:m,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros});
+						row_max_height = 0;
+						meas_row = [];
+						pm = ml>0?block_measures[ml-1]:null;
+					}
+					meas_row.push(m);
+					row_max_height = Math.max(row_max_height, m.renderprop.meas_height);
 				}
-				meas_row.push(m);
-				row_max_height = Math.max(row_max_height, m.renderprop.meas_height);
+				if(row_max_height > 0)
+					y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
+						nm:null,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros});
 			}
-			if(row_max_height > 0)
-				y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
-					nm:null,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros});
 		}
 		
 		var sum_y = 0;
@@ -3203,14 +3236,17 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		console.log("////////");
 		console.log(pageslist);
 	}else{
+		// Screening stage : all the contents are put in the single page
 		var y_stacks = [{type:'titles',height:x_offset}];
 		for(var i = 0; i < track.reharsal_groups.length; ++i)
 		{
 			var rg_macros = getMacros(global_macros, track.reharsal_groups[i]);
 			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i]});
 			var rg = track.reharsal_groups[i];
-			y_stacks.push({type:'meas',height:0,cont:rg.measures,
-				nm:null,pm:null,rg:track.reharsal_groups[i],macros:rg_macros});
+			for(var bi = 0; bi < rg.blocks.length; ++bi){
+				y_stacks.push({type:'meas',height:0,cont:rg.blocks[bi],
+					nm:null,pm:null,rg:track.reharsal_groups[i],macros:rg_macros});
+			}
 		}
 		pageslist.push(y_stacks);
 	}
@@ -3280,7 +3316,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		for(var pageidx = 0; pageidx < pageslist.length; ++pageidx){
 			
 			var yse = pageslist[pageidx];
-			for(var pei = 0; pei < yse.length; ++pei){
+			for(var pei = 0; pei < yse.length; ++pei){ // Loop each y_stacks
 				if(yse[pei].type == 'titles'){
 					
 				}else if(yse[pei].type == 'reharsal'){

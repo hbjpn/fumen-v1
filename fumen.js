@@ -1876,7 +1876,8 @@ function identify_scaling(track, param)
 					m.body_scaling = new_body_width / m.body_width; 
 					
 					// Limit scaling to 1.00 for the case of single row to avoid the too much extension of the measure
-					if(block_measures.length == C){
+					// Physiological effect that 4 >= columns should occupy whole width.
+					if(block_measures.length == C && C <= 3){
 						m.body_scaling = Math.min(1.5, m.body_scaling);
 					}
 				}

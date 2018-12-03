@@ -1848,7 +1848,7 @@ function identify_scaling(track, param)
 				}
 				// Now, C is number of columns per row
 				// Q_w_for_C is width of the row when number of column is C, that is, sum of the maximum width measure of each columns.
-				// meas_max_widths is maximum width of the measures of each columns. Sum of meas_max_widths equals to Q_w_for_C.
+				// meas_max_widths is width of the measure with maximum width in each column. Sum of meas_max_widths equals to Q_w_for_C.
 			
 				// Additional scaling to variable of width of columns
 				var limitvariation = true;
@@ -1874,6 +1874,11 @@ function identify_scaling(track, param)
 					var new_body_width = meas_max_widths[col] * reharsal_wide_scaling - (m.header_width + m.footer_width);
 					m.new_line = ( col == 0 && row > 0 );
 					m.body_scaling = new_body_width / m.body_width; 
+					
+					// Limit scaling to 1.00 for the case of single row to avoid the too much extension of the measure
+					if(block_measures.length == C){
+						m.body_scaling = Math.min(1.5, m.body_scaling);
+					}
 				}
 			
 			}else{

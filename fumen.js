@@ -1375,11 +1375,11 @@ function Renderer(canvas, paper_width, paper_height)
 		row_margin : 15, // Margin between next y_base and lower edge of Measure Lower Area
 		rs_area_height : 24, // Rhythm Slashes Area // ! Currently this should be same as row_height
 		rm_area_height : 30, // Reharsal Mark Area
-		mu_area_height : 25, // Measure Upper Area ( Repeat signs area )
+		mu_area_height : 20, // Measure Upper Area ( Repeat signs area )
 		ml_area_height : 25, // Measure Lower Area ( Lyrics etc.. )
 		below_mu_area_margin : 0, // Margin between MU and chord
 		above_rs_area_margin : 5, // Margin between chord and rythm slash
-		above_ml_area_margin : 15, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
+		above_ml_area_margin : 12, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
 		header_body_margin : 10, // Margin between header and body (x-direction)
 		max_scaling : 1.2,
 		paper_width : paper_width,

@@ -463,6 +463,7 @@ function Chord(chord_str)
 	this.renderprop = {};
 	
 	this.exceptinal_comment = null;
+	this.lyric = null;
 
 	// Analyze Chord symbol
 	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(?:\/(A|B|C|D|E|F|G)(#|b)?)?)(:(\d+)(\.*))?(\~)?/;
@@ -507,6 +508,11 @@ function Chord(chord_str)
 Chord.prototype.setException = function(exceptional_comment)
 {
 	this.exceptinal_comment = exceptional_comment;
+}
+
+Chord.prototype.setLyric = function(lyric)
+{
+	this.lyric = lyric;
 }
 
 
@@ -692,6 +698,12 @@ function Comment(comment, chorddep)
 	this.chorddep = chorddep; // Dependency for particular chord : true/false
 }
 
+function Lyric(lyric, chorddep)
+{
+	this.lyric = lyric;
+	this.chorddep = chorddep; // Dependency for particular chord : true/false
+}
+
 function Parser(error_msg_callback)
 {
 	this.context = {line:0, char:0};
@@ -741,6 +753,7 @@ var TOKEN_PERCENT = 23;
 var TOKEN_EQUAL = 24;
 var TOKEN_STRING = 25;    // String with double quote
 var TOKEN_STRING_SQ = 26; // String with single quote
+var TOKEN_STRING_GRAVE_ACCENT = 27; // String with grave accent '
 var TOKEN_ATMARK = 30; // @
 
 var WORD_DEFINIITON_GENERAL = /^(\w[\w\.\,\-\+\#\:]*)/;
@@ -775,7 +788,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 	if(s.length == 0) return {token:null, s:s, type:TOKEN_END, ss:skipped_spaces};
 	
 	// At first, plain string is analyzed irrespective of word_def.
-	if(s[0] == '"' || s[0] == "'")
+	if(s[0] == '"' || s[0] == "'" || s[0] == "`")
 	{
 		var quote = s[0];
 		var plain_str = "";
@@ -788,7 +801,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		if(!strclosed) this.onParseError("ERROR_WHILE_PARSING_PLAIN_STRING");
 		s = s.substr(1);
 		
-		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : TOKEN_STRING_SQ), ss:skipped_spaces};
+		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : (quote == "'" ? TOKEN_STRING_SQ : TOKEN_STRING_GRAVE_ACCENT)), ss:skipped_spaces};
 	}
 		
 	var r = charIsIn(s[0], '[]<>(){},\n\/%=@');
@@ -1094,6 +1107,16 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 			measure.elements.push(comment);
 			s = r.s;
 			break;
+		case TOKEN_STRING_GRAVE_ACCENT:
+			var lyric = new Lyric(r.token, atmark_detected);
+			if(atmark_detected){
+				associated_chord.setLyric(lyric);
+				atmark_detected = false;
+				associated_chord = null;
+			}
+			measure.elements.push(lyric);
+			s = r.s;
+			break;
 		case TOKEN_ATMARK:
 			var a_chord = measure.elements[measure.elements.length-1];
 			if(!(a_chord instanceof Chord))
@@ -1348,12 +1371,16 @@ function Renderer(canvas, paper_width, paper_height)
 		y_offset : 70,
 		x_offset : 70,
 		min_measure_width : 100,
-		row_height : 24,
-		row_margin : 25,
-		rs_area_height : 24, // Rhythm Slashes Area
+		row_height : 24, // Basic height of the measure when no rs, mu and ml area is drawn
+		row_margin : 15, // Margin between next y_base and lower edge of Measure Lower Area
+		rs_area_height : 24, // Rhythm Slashes Area // ! Currently this should be same as row_height
 		rm_area_height : 30, // Reharsal Mark Area
-		mh_area_height : 25, // Measure Header Area ( Repeat signs area )
-		header_body_margin : 10, // Margin between header and body
+		mu_area_height : 25, // Measure Upper Area ( Repeat signs area )
+		ml_area_height : 25, // Measure Lower Area ( Lyrics etc.. )
+		below_mu_area_margin : 0, // Margin between MU and chord
+		above_rs_area_margin : 5, // Margin between chord and rythm slash
+		above_ml_area_margin : 15, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
+		header_body_margin : 10, // Margin between header and body (x-direction)
 		max_scaling : 1.2,
 		paper_width : paper_width,
 		paper_height : paper_height,
@@ -1752,10 +1779,12 @@ function classifyElements(measure)
 				footer_elements.push(e);
 			}else if(e instanceof Comment){
 				header_elements.push(e);
+			}else if(e instanceof Lyric){
+				header_elements.push(e);
 			}else if(e instanceof ArMark){
-				// Associate the Chord and Comment symbols here
+				// Associate the Chord and Comment or Lyric symbols here
 				var chord = m.elements[ei-1];
-				var comment = m.elements[ei+1];
+				var obj = m.elements[ei+1]; 
 				
 			}
 		}
@@ -2498,9 +2527,8 @@ var rs_prev_coord = null;
 var rs_prev_has_tie = false;
 var rs_prev_tie_paper = null;
 
-function render_empty_rythm_slash(paper, x_body_base, y_body_base, body_width, numslash, param, body_scaling)
+function render_empty_rythm_slash(paper, x_body_base, rs_y_base, body_width, numslash, body_scaling)
 {
-	var rs_y_base = y_body_base + param.row_height + 10;
 	var group = paper.set();
 	for(var r = 0; r < numslash; ++r){
 		var x = x_body_base + body_width / 4.0 * r;
@@ -2578,10 +2606,9 @@ function draw_balken(paper, group, balken, rs_y_base, barlen, flagintv, balken_w
 	}
 }
 
-function render_rhythm_slash(elems, paper, y_body_base, meas_start_x, meas_end_x, param,
+function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 		draw, chord_space, body_scaling, all_has_length)
 {
-	var rs_y_base = y_body_base + param.row_height + 10;
 	// chords is list of chords for each chord object has .renderprop.x property
 	var balken_width = '4px';
 
@@ -2704,8 +2731,9 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 	var C7_width = text.getBBox().width;
 	text.remove();
 	
-	var rs_area_detected = false;
-	var mh_area_detected = false;
+	var rs_area_detected = false; // Rhthm Slash Area
+	var mu_area_detected = false; // Measure Upper Area ( Above the chord symbol )
+	var ml_area_detected = false; // Measure Lower Area ( Blow the chord & rhythm slash area)
 
 	//var draw_5line = false;
 	if(staff == "ON"){
@@ -2719,9 +2747,11 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		{
 			var e = m.elements[ei];
 			if(e instanceof Coda || e instanceof Segno || e instanceof Comment){
-				mh_area_detected = true;
+				mu_area_detected = true;
 			}else if(e instanceof Chord){
 				rs_area_detected |= (e.length_s !== null);
+			}else if( e instanceof Lyric){
+				ml_area_detected = true;
 			}
 		}
 	}
@@ -2729,14 +2759,20 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		rs_area_detected = false;
 	}
 	
-	var d5y = rs_area_detected ? param.row_height + 5 : 0;
- 	
-	var subheader_height = mh_area_detected ? param.mh_area_height : 0;
+	var y_mu_area_base = y_base; // top of mu area(segno, coda, etc..)
+	var y_body_base = y_base + (mu_area_detected ? param.mu_area_height+param.below_mu_area_margin : 0); // top of chord area
+	var y_rs_area_base = y_body_base + (rs_area_detected ? (param.row_height+param.above_rs_area_margin) : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
+	var y_ml_area_base = y_body_base + param.row_height 
+			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
+			+ param.above_ml_area_margin;
 	
-	var y_body_base = y_base + subheader_height;
+	var y_next_base = y_body_base + param.row_height 
+			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
+			+ (ml_area_detected ? param.ml_area_height + param.above_ml_area_margin : 0)
+			+ param.row_margin;
 	
+	var measure_height = y_next_base - y_base;
 	var measure_heights = [];
-	
 	
 	var first_meas_start_x = x;
 	var last_meas_end_x = x;
@@ -2752,39 +2788,42 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		
 		var elements = classifyElements(m);
 		
-		var meas_height = 0;
-		
 		// Draw sub header field ( Repeat signs )
-		var m_mh_area_detected = false;
+		var m_mu_area_detected = false;
+		var m_ml_area_detected = false;
 		for(var ei = 0; ei < elements.header.length; ++ei)
 		{
 			var e = elements.header[ei];
 			if(e instanceof Coda){
-				m_mh_area_detected = true;
+				m_mu_area_detected = true;
 				if(draw){
 					var g = draw_coda(paper, meas_base_x + mh_offset, y_base, "lt", e);
 					mh_offset += g.getBBox().width;
 				}
 			}else if(e instanceof Segno){
-				m_mh_area_detected = true;
+				m_mu_area_detected = true;
 				if(draw){
 					var g = draw_segno(paper, meas_base_x + mh_offset, y_base + 3, e);
 					mh_offset += g.getBBox().width;
 				}
 			}else if(e instanceof Comment){
-				m_mh_area_detected = true;
+				m_mu_area_detected = true;
 				if(draw){
 					// If this comment is associated with a chord with exceptional comment, not rendered here.
 					if (!e.chorddep){
-						var g = raphaelText(paper, meas_base_x + mh_offset, y_base + subheader_height, e.comment, 15, "lb");
+						var g = raphaelText(paper, meas_base_x + mh_offset, y_body_base, e.comment, 15, "lb");
 						mh_offset += g.getBBox().width;
 					}
 				}
+			}else if(e instanceof Lyric){
+				m_ml_area_detected = true;
+				if(draw){
+					// If this comment is associated with a chord with exceptional comment, not rendered here.
+					if (!e.chorddep){
+						// Currently lyrics are only rendered for chord dependency case
+					}
+				}
 			}
-		}
-		
-		if(m_mh_area_detected){
-			meas_height += param.mh_area_height;
 		}
 		
 		// Draw header
@@ -2796,8 +2835,8 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			{
 				var pm = ml == 0 ? prev_measure : row_elements_list[ml-1];
 				var ne = pm ? pm.elements[ pm.elements.length - 1] : null;
-				var r = draw_boundary('begin', ne, e, m.new_line, paper, x, y_body_base + d5y, param, draw);
-				m.renderprop.y = y_body_base + d5y;
+				var r = draw_boundary('begin', ne, e, m.new_line, paper, x, y_rs_area_base, param, draw);
+				m.renderprop.y = y_rs_area_base;
 				m.renderprop.sx = x;
 				m.renderprop.paper = paper;
 				x = r.x;
@@ -2806,9 +2845,9 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				x += 4;
 				var hlw = 0;
 				var lx = x;
-				var textn = raphaelText(paper, lx, y_body_base + d5y,                e.numer, 12, "lt", "icomoon");
+				var textn = raphaelText(paper, lx, y_rs_area_base,                e.numer, 12, "lt", "icomoon");
 				hlw = textn.getBBox().width;
-				var textd = raphaelText(paper, lx, y_body_base + param.row_height/2 + d5y, e.denom, 12, "lt", "icomoon");
+				var textd = raphaelText(paper, lx, y_rs_area_base + param.row_height/2, e.denom, 12, "lt", "icomoon");
 				hlw = Math.max(hlw, textd.getBBox().width);
 				textn.attr({'x':textn.attr('x') + (hlw - textn.getBBox().width)/2});
 				textd.attr({'x':textd.attr('x') + (hlw - textd.getBBox().width)/2});
@@ -2863,8 +2902,13 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 						param, draw, chord_space, x_global_scale, m.body_scaling, theme);
 				if(e.exceptinal_comment !== null){
 					if(draw)
-						var g = raphaelText(paper, x, y_base + subheader_height, 
+						var g = raphaelText(paper, x, y_body_base, 
 							e.exceptinal_comment.comment, 15, "lb");
+				}
+				if(e.lyric !== null){
+					if(draw)
+						var g = raphaelText(paper, x, y_ml_area_base, 
+							e.lyric.lyric, 10, "lt");
 				}
 				x = cr.x;
 				if(!isFinite(x)){
@@ -2886,14 +2930,14 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				var oy = yoffsets[rd];
 				var fs = 14;
 				if(rd <= 4){
-					var text = raphaelText(paper, x, y_body_base + param.row_height/2 + d5y, cmap[rd], fs, "lc", "icomoon");
+					var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2, cmap[rd], fs, "lc", "icomoon");
 					rg.push(text);
 				}else{
 					var nKasane = myLog2(rd) - 2;
 					var rdx = 2;
 					var rdy = -7;
 					for(var k = 0; k < nKasane; ++k){
-						var text = raphaelText(paper, x + k*rdx, y_body_base + param.row_height/2 + d5y + k*rdy + oy, '\ue603', fs, "lc", "icomoon");
+						var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "icomoon");
 						rg.push(text);
 					}
 				}
@@ -2933,27 +2977,27 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			{
 				var nm = (ml == row_elements_list.length-1) ? next_measure : row_elements_list[ml+1];
 				var ne = nm ? nm.elements[0] : null;
-				var r = draw_boundary('end', e, ne, nm ? nm.new_line : false, paper, x, y_body_base + d5y, param, draw);
+				var r = draw_boundary('end', e, ne, nm ? nm.new_line : false, paper, x, y_rs_area_base, param, draw);
 				m.renderprop.ex = x;
 				x = r.x;
 			}else if(e instanceof DaCapo){
-				text = raphaelText(paper, x, y_body_base - 8 + d5y/* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_rs_area_base　- 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
 			}else if(e instanceof DalSegno){
-				text = raphaelText(paper, x, y_body_base - 8 + d5y/* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_rs_area_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
 			}else if(e instanceof ToCoda){
 				if(rs_area_detected){
-					var text = raphaelText(paper, x, y_body_base + d5y, "To", 15, "lb").attr(param.repeat_mark_font);	
+					var text = raphaelText(paper, x, y_rs_area_base, "To", 15, "lb").attr(param.repeat_mark_font);	
 					x += (text.getBBox().width + 5);
-					var coda = draw_coda(paper, x, y_body_base + d5y, "lb", e);
+					var coda = draw_coda(paper, x, y_rs_area_base, "lb", e);
 					x += coda.getBBox().width;
 				}else{
-					var coda = draw_coda(paper, x, y_body_base + d5y, "rb", e);
-					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_body_base + d5y, "To", 15, "rb").attr(param.repeat_mark_font);		
+					var coda = draw_coda(paper, x, y_rs_area_base, "rb", e);
+					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_rs_area_base, "To", 15, "rb").attr(param.repeat_mark_font);		
 				}
 			}else if(e instanceof Fine){
-				text = raphaelText(paper, x, y_body_base - 8 + d5y/* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_rs_area_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
 			}else{
 				throw "ERROR";
@@ -3002,37 +3046,31 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			}
 		}
 		
-		meas_height += param.row_height;
-		
 		// Draw Rythm Slashes
 		if(rs_area_detected){
-			var rdy = 10;
+			var rdy = 15; // Magic Number to place the slash at the center of 5 lines
 			var g = render_rhythm_slash(
 					chord_and_rests, paper,
-					y_body_base + rdy,
+					y_rs_area_base + rdy,
 					meas_start_x, meas_end_x, 
-					param, draw, 0, m.body_scaling, all_has_length);
-			
-			meas_height += param.rs_area_height;
+					draw, 0, m.body_scaling, all_has_length);
 			
 			if(!g){
-				render_empty_rythm_slash(paper, body_base, y_body_base + rdy,
-						m.body_width, 4, param, m.body_scaling);
+				render_empty_rythm_slash(paper, body_base, y_rs_area_base + rdy,
+						m.body_width, 4, m.body_scaling);
 			}
 		}
 		
-		meas_height += param.row_margin;
-		
-		m.renderprop.meas_height = meas_height;
-		measure_heights.push(meas_height);
+		m.renderprop.meas_height = measure_height;
+		measure_heights.push(measure_height);
 		
 	} // elements loop
 	
 	if(rs_area_detected){
 		for(var i = 0; i < 5; ++i){
-			var intv = 6;
-			var dy = 5;
-			if(draw) paper.path( svgLine([[first_meas_start_x, y_body_base + param.row_height + i*intv + dy],[last_meas_end_x, y_body_base + param.row_height + i*intv + dy]]) ).attr({'stroke-width':'1px'});
+			var intv = param.rs_area_height / (5-1);
+			var dy = 0;
+			if(draw) paper.path( svgLine([[first_meas_start_x, y_rs_area_base + i*intv + dy],[last_meas_end_x, y_rs_area_base + i*intv + dy]]) ).attr({'stroke-width':'1px'});
 		}
 	}
 	

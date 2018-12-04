@@ -2906,9 +2906,13 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 							e.exceptinal_comment.comment, 15, "lb");
 				}
 				if(e.lyric !== null){
-					if(draw)
-						var g = raphaelText(paper, x, y_ml_area_base, 
-							e.lyric.lyric, 10, "lt");
+					if(draw){
+						var llist = e.lyric.lyric.split("/");
+						for(var li=0; li < llist.length; ++li){
+							var g = raphaelText(paper, x, y_ml_area_base + li*10, 
+								llist[li], 10, "lt");
+						}
+					}
 				}
 				x = cr.x;
 				if(!isFinite(x)){

@@ -1376,7 +1376,7 @@ function Renderer(canvas, paper_width, paper_height)
 		rs_area_height : 24, // Rhythm Slashes Area // ! Currently this should be same as row_height
 		rm_area_height : 30, // Reharsal Mark Area
 		mu_area_height : 20, // Measure Upper Area ( Repeat signs area )
-		ml_area_height : 25, // Measure Lower Area ( Lyrics etc.. )
+		ml_row_height : 10, // Measure Lower Area ( Lyrics etc.. )
 		below_mu_area_margin : 0, // Margin between MU and chord
 		above_rs_area_margin : 5, // Margin between chord and rythm slash
 		above_ml_area_margin : 12, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
@@ -2622,7 +2622,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 	for(var ei = 0; ei < elems.length; ++ei){
 		var e = elems[ei];
 		var x = e.renderprop.x;
-		var barlen = 20;
+		var barlen = 15;
 		var flagintv = 5;
 		if(e.length_s === null || e.length_s === undefined)
 			continue;
@@ -2734,7 +2734,8 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 	var rs_area_detected = false; // Rhthm Slash Area
 	var mu_area_detected = false; // Measure Upper Area ( Above the chord symbol )
 	var ml_area_detected = false; // Measure Lower Area ( Blow the chord & rhythm slash area)
-
+	var lyric_rows = 0;
+	
 	//var draw_5line = false;
 	if(staff == "ON"){
 		rs_area_detected = true;
@@ -2752,6 +2753,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 				rs_area_detected |= (e.length_s !== null);
 			}else if( e instanceof Lyric){
 				ml_area_detected = true;
+				lyric_rows = Math.max(e.lyric.split("/").length, lyric_rows);
 			}
 		}
 	}
@@ -2768,7 +2770,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 	
 	var y_next_base = y_body_base + param.row_height 
 			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
-			+ (ml_area_detected ? param.ml_area_height + param.above_ml_area_margin : 0)
+			+ (ml_area_detected ? lyric_rows * param.ml_row_height + param.above_ml_area_margin : 0)
 			+ param.row_margin;
 	
 	var measure_height = y_next_base - y_base;
@@ -2909,7 +2911,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 					if(draw){
 						var llist = e.lyric.lyric.split("/");
 						for(var li=0; li < llist.length; ++li){
-							var g = raphaelText(paper, x, y_ml_area_base + li*10, 
+							var g = raphaelText(paper, x, y_ml_area_base + li*param.ml_row_height, 
 								llist[li], 10, "lt");
 						}
 					}

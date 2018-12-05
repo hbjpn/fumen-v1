@@ -116,6 +116,7 @@ function Generate()
 <textarea id="score_code" style="width:100%; height:400px; ">
 %TITLE="Sample Piece"
 %ARTIST="Some artists"
+%XSCALE="1.0"
 
 [Intro]
 
@@ -134,7 +135,7 @@ function Generate()
 | <Coda> F | Fm | F/G | Fm/Ab |
 
 [D]
-| <S2 straight> A A7 | F#m:2. F7:4~  | F7:2 Bb:8 Bb:8 Bb:4 |
+| <S2 straight> A A7 | F#m:2. F7:4~  | F7:2 Bb:8 Bb:8 Bb:4 | C:2 :4. :8~ | :2 r:4 D:4 |
 
 [E]
 | A ||: B | C :||: D | E :|| F |
@@ -147,7 +148,12 @@ function Generate()
 | InvalidChord "Double quoted string" 'Single quoted string' Am7 Bm7@'text on chord' Cm7|
 
 [H]
+||: (4/4) <S3> 'Vocal start' C:4  @`Hoge/Pofu/Peke` B:2. @`FugaFuga` | A C | [1.] Bm7-5:2 B7:2 :|| [2.] C:2 F:2 |A | B | C | D |
+
+[Z]
 | C | Cm <Fine> | F | F7 <D.S.2> |
+
+
 
 </textarea>
 <hr/>

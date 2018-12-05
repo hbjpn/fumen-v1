@@ -755,6 +755,7 @@ var TOKEN_STRING = 25;    // String with double quote
 var TOKEN_STRING_SQ = 26; // String with single quote
 var TOKEN_STRING_GRAVE_ACCENT = 27; // String with grave accent '
 var TOKEN_ATMARK = 30; // @
+var TOKEN_COLON = 31; // :
 
 var WORD_DEFINIITON_GENERAL = /^(\w[\w\.\,\-\+\#\:]*)/;
 var WORD_DEFINITION_IN_REHARSAL_MARK = /^[^\[\]]*/;
@@ -803,19 +804,6 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		
 		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : (quote == "'" ? TOKEN_STRING_SQ : TOKEN_STRING_GRAVE_ACCENT)), ss:skipped_spaces};
 	}
-		
-	var r = charIsIn(s[0], '[]<>(){},\n\/%=@');
-	if(r != null){
-		return {token: s[0], s: s.substr(1), ss:skipped_spaces,
-			type: [
-				TOKEN_BRACKET_LS, TOKEN_BRACKET_RS,
-				TOKEN_BRACKET_LA, TOKEN_BRACKET_RA,
-				TOKEN_BRACKET_LR, TOKEN_BRACKET_RR,
-				TOKEN_BRACKET_LW, TOKEN_BRACKET_RW,
-				TOKEN_COMMA, TOKEN_NL, TOKEN_SLASH,
-				TOKEN_PERCENT, TOKEN_EQUAL, TOKEN_ATMARK][r.index]
-		};
-	}
 	
 	var r = charStartsWithAmong(s, ["||:","||.","||","|"]);
 	if(r != null){
@@ -836,6 +824,19 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 			else loopTimes = Number(m[3]);
 		}
 		return {token:m[0],s:s.substr(m[0].length), ss:skipped_spaces, type:(m[1]==":||:" ? TOKEN_MB_LOOP_BOTH : TOKEN_MB_LOOP_END),param:{times:loopTimes,ntimes:isNTimes}};
+	}
+	
+	var r = charIsIn(s[0], '[]<>(){},\n\/%=@:');
+	if(r != null){
+		return {token: s[0], s: s.substr(1), ss:skipped_spaces,
+			type: [
+				TOKEN_BRACKET_LS, TOKEN_BRACKET_RS,
+				TOKEN_BRACKET_LA, TOKEN_BRACKET_RA,
+				TOKEN_BRACKET_LR, TOKEN_BRACKET_RR,
+				TOKEN_BRACKET_LW, TOKEN_BRACKET_RW,
+				TOKEN_COMMA, TOKEN_NL, TOKEN_SLASH,
+				TOKEN_PERCENT, TOKEN_EQUAL, TOKEN_ATMARK, TOKEN_COLON][r.index]
+		};
 	}
 	
 	// "Word characters"
@@ -1133,8 +1134,9 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 				s = rr.s;
 				break;
 			}
-			// To SLASH
+			// To SLASH or COLON
 		case TOKEN_SLASH:
+		case TOKEN_COLON:
 			var r = this.parseChordSymbol(r.token, r.type, r.s);
 			measure.elements.push(r.chord);
 			s = r.s;
@@ -2276,7 +2278,7 @@ var CHORD_RENDER_THEME = {
 };
 
 function render_chord(chord, transpose, half_type, paper, x, y_body_base,
-		param, draw, chord_space, x_global_scale, body_scaling, theme)
+		param, draw, C7_width, chord_space, x_global_scale, body_scaling, theme)
 {
 	var row_height = param.row_height;
 	
@@ -2308,6 +2310,12 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	var bases = chord.getChordStrBase(transpose, half_type);
 	var elems = chord.mid_elem_objs;
 	var group = paper.set();
+	
+	// if bases are null, elems are null, then it is just a duration information
+	if ( bases[0] == null && bases[1] == null && elems === undefined ){
+		x += (C7_width * x_global_scale * body_scaling + chord_space * body_scaling);
+		return {group:group, x:x};
+	}
 
 	var _3rdelem = [];
 	var _5thelem = [];
@@ -2726,7 +2734,7 @@ function new_row_yinfo()
 function render_measure_row(paper, x_global_scale, transpose, half_type,
 		row_elements_list, prev_measure, next_measure, y_base, param, draw, staff, theme)
 {
-	/* Reference reserved width for empty measures */
+	/* Reference reserved width for empty measures or chord symbol without base names*/
 	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "icomoon");
 	var C7_width = text.getBBox().width;
 	text.remove();
@@ -2901,7 +2909,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			
 			if(e instanceof Chord){
 				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
-						param, draw, chord_space, x_global_scale, m.body_scaling, theme);
+						param, draw, C7_width, chord_space, x_global_scale, m.body_scaling, theme);
 				if(e.exceptinal_comment !== null){
 					if(draw)
 						var g = raphaelText(paper, x, y_body_base, 

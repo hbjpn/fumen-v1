@@ -2206,6 +2206,9 @@ var CHORD_RENDER_THEME = {
 "Default":{
 	"_base_font_size" : 18,
 	"_base_font_family" : "icomoon",
+	"_on_bass_font_size" : 18,
+	"_on_bass_style" : "/",
+	"_on_bass_yshift" : 0, 
 	"_3rd_global_dy" : 2,
 	"_3rd_font_profile" : {
 		'M'   : function(p){return [[16,0,'M']];},
@@ -2242,6 +2245,9 @@ var CHORD_RENDER_THEME = {
 "Arial":{
 	"_base_font_size" : 20,
 	"_base_font_family" : "Arial",
+	"_on_bass_font_size" : 15, 
+	"_on_bass_style" : "/", 
+	"_on_bass_yshift" : 1,
 	"_3rd_global_dy" : 1,
 	"_3rd_font_profile" : {
 		'M'   : function(p){return [[16,0,'M']];},
@@ -2466,10 +2472,10 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	xl += aw;
 	if(bases[1])
 	{
-		text = raphaelText(paper, xl, y_body_base + row_height/2, "/", 26, "lc");
+		text = raphaelText(paper, xl, y_body_base + row_height/2 + fp["_on_bass_yshift"], fp["_on_bass_style"], fp["_on_bass_font_size"], "lc");
 		group.push(text);
 		xl += text.getBBox().width;
-		text = raphaelText(paper, xl, y_body_base + row_height/2, bases[1], fp["_base_font_size"], "lc", fontfamily);
+		text = raphaelText(paper, xl, y_body_base + row_height/2 + fp["_on_bass_yshift"], bases[1], fp["_on_bass_font_size"], "lc", fontfamily);
 		group.push(text);
 		xl += text.getBBox().width;
 	}

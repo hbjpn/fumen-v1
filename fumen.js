@@ -2761,7 +2761,7 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 		for(var ei = 0; ei < m.elements.length; ++ei)
 		{
 			var e = m.elements[ei];
-			if(e instanceof Coda || e instanceof Segno || e instanceof Comment || e instanceof LoopIndicator){
+			if(e instanceof Coda || e instanceof Segno || e instanceof Comment || e instanceof LoopIndicator || e instanceof ToCoda){
 				mu_area_detected = true;
 			}else if(e instanceof Chord){
 				rs_area_detected |= (e.length_s !== null);

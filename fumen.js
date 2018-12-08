@@ -15,6 +15,90 @@
 
 var Fumen = (function(){
 
+/**
+ * Chord rendering profile
+ */
+var CHORD_RENDER_THEME = {
+"Default":{
+	"_base_font_size" : 18,
+	"_base_font_family" : "icomoon",
+	"_on_bass_font_size" : 18,
+	"_on_bass_style" : "/",
+	"_on_bass_yshift" : 0, 
+	"_3rd_global_dy" : 2,
+	"_3rd_font_profile" : {
+		'M'   : function(p){return [[16,0,'M']];},
+		'm'   : function(p){return [[16,0,'m']];}
+	},
+	"_6791113_global_dy" : 2,
+	"_6791113_font_profile" : {
+		'dim' : function(p){return [[16,0,"d"]];},
+		'sus' : function(p){return [[18,0,"s"],[13,4,p?p:""]];},
+		'M'   : function(p){return [[16,0,"M"],[13,4,p?p:""]];},
+		'm'   : function(p){return [[16,0,"m"]];},
+		'add' : function(p){return [[20,0,"a"],[13,4,p?p:""]];},
+		'dig' : function(p){
+				if(!p) p = "";
+				else if(p=="11") p = "\x25";
+				else if(p=="13") p = "\x26";
+				return [[13,4,p]];
+			}
+	},
+	"_5th_global_dy" : -8,
+	"_5th_font_profile" : {
+		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
+		'dig' : function(p){return [[13,0,p]];}
+	},
+	"_altered_global_dy" : -8,
+	"_multi_altered_margin" : 0,
+	"_altered_font_profile" : {
+		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
+		'alt' : function(p){return [[13,0,'alt']];}
+	}
+},
+"Arial":{
+	"_base_font_size" : 20,
+	"_base_font_family" : "Arial",
+	"_on_bass_font_size" : 15, 
+	"_on_bass_style" : "/", 
+	"_on_bass_yshift" : 1,
+	"_3rd_global_dy" : 1,
+	"_3rd_font_profile" : {
+		'M'   : function(p){return [[16,0,'M']];},
+		'm'   : function(p){return [[16,0,'m']];}
+	},
+	"_6791113_global_dy" : 1,
+	"_6791113_font_profile" : {
+		'dim' : function(p){return [[16,0,"dim"]];},
+		'sus' : function(p){return [[16,0,"sus"],[15,1,p?p:""]];},
+		'M'   : function(p){return [[16,0,"M"],[15,1,p?p:""]];},
+		'm'   : function(p){return [[16,0,"m"]];},
+		'add' : function(p){return [[16,0,"add"],[15,1,p?p:""]];},
+		'dig' : function(p){
+				if(!p) p = "";
+				//else if(p=="11") p = "\x25";
+				//else if(p=="13") p = "\x26";
+				return [[15,1,p]];
+			}
+	},
+	"_5th_global_dy" : -8,
+	"_5th_font_profile" : {
+		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
+		'dig' : function(p){return [[13,0,p]];}
+	},
+	"_altered_global_dy" : -8,
+	"_multi_altered_margin" : -4,
+	"_altered_font_profile" : {
+		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
+		'alt' : function(p){return [[13,0,'alt']];}
+	}
+}
+};
+
 var pages = new Array();
 
 var RENDERING_RULE_BOUNDARY = new Array();
@@ -1375,14 +1459,14 @@ function Renderer(canvas, paper_width, paper_height)
 		x_offset : 70,
 		min_measure_width : 100,
 		row_height : 24, // Basic height of the measure when no rs, mu and ml area is drawn
-		row_margin : 15, // Margin between next y_base and lower edge of Measure Lower Area
+		row_margin : 10, // Margin between next y_base and lower edge of Measure Lower Area
 		rs_area_height : 24, // Rhythm Slashes Area // ! Currently this should be same as row_height
 		rm_area_height : 30, // Reharsal Mark Area
 		mu_area_height : 20, // Measure Upper Area ( Repeat signs area )
 		ml_row_height : 10, // Measure Lower Area ( Lyrics etc.. )
 		below_mu_area_margin : 0, // Margin between MU and chord
 		above_rs_area_margin : 5, // Margin between chord and rythm slash
-		above_ml_area_margin : 12, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
+		above_ml_area_margin : 8, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
 		header_body_margin : 10, // Margin between header and body (x-direction)
 		max_scaling : 1.2,
 		paper_width : paper_width,
@@ -2164,124 +2248,6 @@ function render_chord_as_string(chord, transpose, half_type, paper, x, y_body_ba
 
 var ChordRenderBuffer = {
 		
-};
-
-/**
- * Chord rendering profile
- */
-var CHORD_RENDER_THEME = {
-/*"icomoon":{
-	"base_font_size" : 18,
-	"_3rd_global_dy" : 0,
-	"_3rd_font_profile" : {
-		'M'   : function(p){return [[16,-7,'M']];},
-		'm'   : function(p){return [[16,-7,'m']];}
-	},
-	"_6791113_global_dy" : 0,
-	"_6791113_font_profile" : {
-		'dim' : function(p){return [[16,-7,"d"]];},
-		'sus' : function(p){return [[18,-9,"s"],[13,-2,p?p:""]];},
-		'M'   : function(p){return [[16,-7,"M"],[13,-2,p?p:""]];},
-		'm'   : function(p){return [[16,-7,"m"]];},
-		'add' : function(p){return [[20,-10,"a"],[13,-2,p?p:""]];},
-		'dig' : function(p){
-				if(!p) p = "";
-				else if(p=="11") p = "\x25";
-				else if(p=="13") p = "\x26";
-				return [[13,-2,p]];
-			}
-	},
-	"_5th_global_dy" : 0,
-	"_5th_font_profile" : {
-		'#'   : function(p){return [[13,-2,'+'],[13,-2,p]];},
-		'b'   : function(p){return [[13,-2,'-'],[13,-2,p]];},
-		'dig' : function(p){return [[13,-2,p]];}
-	},
-	"_altered_global_dy" : 0,
-	"_altered_font_profile" : {
-		'#'   : function(p){return [[13,-2,'#'],[13,-2,p]];},
-		'b'   : function(p){return [[13,-2,'b'],[13,-2,p]];},
-		'alt' : function(p){return [[13,-2,'alt']];}
-	}
-},*/
-"Default":{
-	"_base_font_size" : 18,
-	"_base_font_family" : "icomoon",
-	"_on_bass_font_size" : 18,
-	"_on_bass_style" : "/",
-	"_on_bass_yshift" : 0, 
-	"_3rd_global_dy" : 2,
-	"_3rd_font_profile" : {
-		'M'   : function(p){return [[16,0,'M']];},
-		'm'   : function(p){return [[16,0,'m']];}
-	},
-	"_6791113_global_dy" : 2,
-	"_6791113_font_profile" : {
-		'dim' : function(p){return [[16,0,"d"]];},
-		'sus' : function(p){return [[18,0,"s"],[13,4,p?p:""]];},
-		'M'   : function(p){return [[16,0,"M"],[13,4,p?p:""]];},
-		'm'   : function(p){return [[16,0,"m"]];},
-		'add' : function(p){return [[20,0,"a"],[13,4,p?p:""]];},
-		'dig' : function(p){
-				if(!p) p = "";
-				else if(p=="11") p = "\x25";
-				else if(p=="13") p = "\x26";
-				return [[13,4,p]];
-			}
-	},
-	"_5th_global_dy" : -8,
-	"_5th_font_profile" : {
-		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
-		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
-		'dig' : function(p){return [[13,0,p]];}
-	},
-	"_altered_global_dy" : -8,
-	"_multi_altered_margin" : 0,
-	"_altered_font_profile" : {
-		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
-		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
-		'alt' : function(p){return [[13,0,'alt']];}
-	}
-},
-"Arial":{
-	"_base_font_size" : 20,
-	"_base_font_family" : "Arial",
-	"_on_bass_font_size" : 15, 
-	"_on_bass_style" : "/", 
-	"_on_bass_yshift" : 1,
-	"_3rd_global_dy" : 1,
-	"_3rd_font_profile" : {
-		'M'   : function(p){return [[16,0,'M']];},
-		'm'   : function(p){return [[16,0,'m']];}
-	},
-	"_6791113_global_dy" : 1,
-	"_6791113_font_profile" : {
-		'dim' : function(p){return [[16,0,"dim"]];},
-		'sus' : function(p){return [[16,0,"sus"],[15,1,p?p:""]];},
-		'M'   : function(p){return [[16,0,"M"],[15,1,p?p:""]];},
-		'm'   : function(p){return [[16,0,"m"]];},
-		'add' : function(p){return [[16,0,"add"],[15,1,p?p:""]];},
-		'dig' : function(p){
-				if(!p) p = "";
-				//else if(p=="11") p = "\x25";
-				//else if(p=="13") p = "\x26";
-				return [[15,1,p]];
-			}
-	},
-	"_5th_global_dy" : -8,
-	"_5th_font_profile" : {
-		'#'   : function(p){return [[13,0,'+'],[13,0,p]];},
-		'b'   : function(p){return [[13,0,'-'],[13,0,p]];},
-		'dig' : function(p){return [[13,0,p]];}
-	},
-	"_altered_global_dy" : -8,
-	"_multi_altered_margin" : -4,
-	"_altered_font_profile" : {
-		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
-		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
-		'alt' : function(p){return [[13,0,'alt']];}
-	}
-}
 };
 
 function render_chord(chord, transpose, half_type, paper, x, y_body_base,

@@ -325,6 +325,7 @@ function Track()
 {
 	this.reharsal_groups = new Array();
 	this.macros = {};
+	this.pre_render_info = {};
 }
 
 function ReharsalGroup()
@@ -1824,7 +1825,7 @@ function maxtor(array, indexer, functor)
 function identify_scaling(track, param)
 {
 	console.log("Identify scaling called");
-	var width = param.paper_width - param.x_offset * 2;
+	var width = param.paper_width - param.x_offset * 2 - track.pre_render_info["meas_left_offset"];
 	
 	for(var i = 0; i < track.reharsal_groups.length; ++i)
 	{
@@ -3152,6 +3153,12 @@ function getGlobalMacros(track)
 		macros_to_apply.theme = track.macros["THEME"];
 	}
 	
+	macros_to_apply.reharsal_mark_position = "Default";
+	if( "REHARSAL_MARK" in track.macros)
+	{
+		macros_to_apply.reharsal_mark_position = track.macros["REHARSAL_MARK"];
+	}
+	
 	return macros_to_apply;
 }
 
@@ -3318,6 +3325,27 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Invoke async loop execution");
 	
+	/* If reharsal group is drawn left side of the measures, calculte the offset */
+	if(!draw){
+		track.pre_render_info["meas_left_offset"] = 0;
+		var meas_left_offset = 0;
+		if( global_macros.reharsal_mark_position == "Left"){
+			for(var pageidx = 0; pageidx < pageslist.length; ++pageidx){
+				var yse = pageslist[pageidx];
+				for(var pei = 0; pei < yse.length; ++pei){ // Loop each y_stacks
+					if(yse[pei].type == 'reharsal'){
+						var rg = yse[pei].cont;
+						var g = raphaelTextWithBox(paper, x_offset, y_base, rg.name, 18);
+						meas_left_offset = Math.max(g.getBBox().width, meas_left_offset);
+						g.remove();
+					}
+				}
+			}
+			meas_left_offset += 10;
+		}
+		track.pre_render_info["meas_left_offset"] = meas_left_offset;
+	}
+	
 	if(async_mode){
 		Task.Foreach(pageslist, function(pageidx, len, page, ctx1){
 			
@@ -3337,10 +3365,11 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 						var g = raphaelTextWithBox(ctx2.paper, x, ctx2.y_base, rg.name, 18);
 					}
 					
-					ctx2.y_base += ctx2.param.rm_area_height; // Reharsal mark area height
+					if( ! (global_macros.reharsal_mark_position == "Left") )
+						ctx2.y_base += ctx2.param.rm_area_height; // Reharsal mark area height
 					
 				}else if(yse.type == 'meas'){
-					x = x_offset;
+					x = x_offset + track.pre_render_info["meas_left_offset"];
 					var row_elements_list = yse.cont;
 					var r = render_measure_row(
 							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose, 
@@ -3377,6 +3406,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		return task;
 		
 	}else{
+		
 		for(var pageidx = 0; pageidx < pageslist.length; ++pageidx){
 			
 			var yse = pageslist[pageidx];
@@ -3390,11 +3420,11 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 					if(draw){
 						var g = raphaelTextWithBox(paper, x, y_base, rg.name, 18);
 					}
-					
-					y_base += param.rm_area_height; // Reharsal mark area height
+					if( ! (global_macros.reharsal_mark_position == "Left") )
+						y_base += param.rm_area_height; // Reharsal mark area height
 					
 				}else if(yse[pei].type == 'meas'){
-					x = x_offset;
+					x = x_offset + track.pre_render_info["meas_left_offset"];
 					var row_elements_list = yse[pei].cont;
 					var r = render_measure_row(
 							paper, yse[pei].macros.x_global_scale, yse[pei].macros.transpose,

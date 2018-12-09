@@ -99,6 +99,29 @@ var CHORD_RENDER_THEME = {
 }
 };
 
+var RENDER_PARAM = {
+	y_title_offset : 50,
+	y_author_offset : 90,
+	y_first_page_offset : 120,
+	y_offset : 70,
+	x_offset : 70,
+	min_measure_width : 100,
+	row_height : 24, // Basic height of the measure when no rs, mu and ml area is drawn
+	row_margin : 10, // Margin between next y_base and lower edge of Measure Lower Area
+	rs_area_height : 24, // Rhythm Slashes Area // ! Currently this should be same as row_height
+	rm_area_height : 30, // Reharsal Mark Area
+	mu_area_height : 20, // Measure Upper Area ( Repeat signs area )
+	ml_row_height : 10, // Measure Lower Area ( Lyrics etc.. )
+	below_mu_area_margin : 0, // Margin between MU and chord
+	above_rs_area_margin : 5, // Margin between chord and rythm slash
+	above_ml_area_margin : 8, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
+	header_body_margin : 10, // Margin between header and body (x-direction)
+	max_scaling : 1.2,
+	paper_width : 96 * 210 / 25.4, // 96dpi * A4_width[mm] / 25.4[mm/inche]
+	paper_height : 96 * 297 / 25.4, // 96dpi * A4_height[mm] / 25.4[mm/inche]
+	repeat_mark_font : {'font-family':'Times New Roman','font-style':'italic','font-weight':'bold'},
+};
+
 var pages = new Array();
 
 var RENDERING_RULE_BOUNDARY = new Array();
@@ -1450,29 +1473,10 @@ Parser.prototype.parse = function(s)
 function Renderer(canvas, paper_width, paper_height)
 {
 	this.canvas = canvas;
-	this.param = {
-		row_interval : 70,
-		y_title_offset : 50,
-		y_author_offset : 90,
-		y_first_page_offset : 120,
-		y_offset : 70,
-		x_offset : 70,
-		min_measure_width : 100,
-		row_height : 24, // Basic height of the measure when no rs, mu and ml area is drawn
-		row_margin : 10, // Margin between next y_base and lower edge of Measure Lower Area
-		rs_area_height : 24, // Rhythm Slashes Area // ! Currently this should be same as row_height
-		rm_area_height : 30, // Reharsal Mark Area
-		mu_area_height : 20, // Measure Upper Area ( Repeat signs area )
-		ml_row_height : 10, // Measure Lower Area ( Lyrics etc.. )
-		below_mu_area_margin : 0, // Margin between MU and chord
-		above_rs_area_margin : 5, // Margin between chord and rythm slash
-		above_ml_area_margin : 8, // Margin between (chord/rythm slash) and measure lower(lyrics etc) rea
-		header_body_margin : 10, // Margin between header and body (x-direction)
-		max_scaling : 1.2,
-		paper_width : paper_width,
-		paper_height : paper_height,
-		repeat_mark_font : {'font-family':'Times New Roman','font-style':'italic','font-weight':'bold'},
-	};
+	this.param = RENDER_PARAM; // Default parameters
+	// Overwrite
+	this.param.paper_width = paper_width;
+	this.param.paper_height = paper_height;
 	this.track = null;
 }
 

@@ -2757,7 +2757,13 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
 			+ (ml_area_detected ? lyric_rows * param.ml_row_height + param.above_ml_area_margin : 0)
 			+ param.row_margin;
-	
+	if(false && draw){
+	    var lines = [y_base, y_mu_area_base, y_body_base, y_rs_area_base, y_ml_area_base, y_next_base];
+	    var colors = ["black","red","blue","green","orange","pink"];
+	    for(var ii=0; ii<lines.length; ++ii)
+    		paper.path(svgLine(0+ii*20, lines[ii], 100+ii*20, lines[ii])).attr({"stroke-width":"1","stroke":colors[ii]});
+	}
+
 	var measure_height = y_next_base - y_base;
 	var measure_heights = [];
 	
@@ -2784,13 +2790,13 @@ function render_measure_row(paper, x_global_scale, transpose, half_type,
 			if(e instanceof Coda){
 				m_mu_area_detected = true;
 				if(draw){
-					var g = draw_coda(paper, meas_base_x + mh_offset, y_base, "lt", e);
+					var g = draw_coda(paper, meas_base_x + mh_offset, y_mu_area_base, "lt", e);
 					mh_offset += g.getBBox().width;
 				}
 			}else if(e instanceof Segno){
 				m_mu_area_detected = true;
 				if(draw){
-					var g = draw_segno(paper, meas_base_x + mh_offset, y_base + 3, e);
+					var g = draw_segno(paper, meas_base_x + mh_offset, y_mu_area_base, e);
 					mh_offset += g.getBBox().width;
 				}
 			}else if(e instanceof Comment){

@@ -2708,8 +2708,8 @@ function new_row_yinfo()
 	return rowyinfo;
 }
 
-function render_measure_row(paper, x_global_scale, transpose, half_type,
-		row_elements_list, prev_measure, next_measure, y_base, param, draw, staff, theme)
+function render_measure_row(x, paper, x_global_scale, transpose, half_type,
+		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw, staff, theme)
 {
 	/* Reference reserved width for empty measures or chord symbol without base names*/
 	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "icomoon");
@@ -3334,22 +3334,21 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 				if(yse.type == 'titles'){
 					
 				}else if(yse.type == 'reharsal'){
-					x = x_offset;
 					var rg = yse.cont;
 					
 					if(ctx2.draw){
-						var g = raphaelTextWithBox(ctx2.paper, x, ctx2.y_base, rg.name, 18);
+						var g = raphaelTextWithBox(ctx2.paper, x_offset, ctx2.y_base, rg.name, 18);
 					}
 					
 					if( ! (global_macros.reharsal_mark_position == "Left") )
 						ctx2.y_base += ctx2.param.rm_area_height; // Reharsal mark area height
 					
 				}else if(yse.type == 'meas'){
-					x = x_offset + track.pre_render_info["meas_left_offset"];
 					var row_elements_list = yse.cont;
 					var r = render_measure_row(
+							x_offset + track.pre_render_info["meas_left_offset"],
 							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose, 
-							yse.macros.half_type, row_elements_list, yse.pm, yse.nm,
+							yse.macros.half_type, row_elements_list, yse.rg, yse.pm, yse.nm,
 							ctx2.y_base, ctx2.param, ctx2.draw,
 							yse.macros.staff, global_macros.theme);
 					ctx2.y_base = r.y_base;
@@ -3390,22 +3389,21 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 				if(yse[pei].type == 'titles'){
 					
 				}else if(yse[pei].type == 'reharsal'){
-					x = x_offset;
 					var rg = yse[pei].cont;
 					
 					if(draw){
-						var g = raphaelTextWithBox(paper, x, y_base, rg.name, 18);
+						var g = raphaelTextWithBox(paper, x_offset, y_base, rg.name, 18);
 					}
 					if( ! (global_macros.reharsal_mark_position == "Left") )
 						y_base += param.rm_area_height; // Reharsal mark area height
 					
 				}else if(yse[pei].type == 'meas'){
-					x = x_offset + track.pre_render_info["meas_left_offset"];
 					var row_elements_list = yse[pei].cont;
 					var r = render_measure_row(
+							x_offset + track.pre_render_info["meas_left_offset"],
 							paper, yse[pei].macros.x_global_scale, yse[pei].macros.transpose,
 							yse[pei].macros.half_type, row_elements_list, 
-							yse[pei].pm, yse[pei].nm,
+							yse[pei].rg, yse[pei].pm, yse[pei].nm,
 							y_base, param, draw, yse[pei].macros.staff, global_macros.theme);
 					y_base = r.y_base;
 				}

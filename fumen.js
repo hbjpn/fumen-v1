@@ -2709,7 +2709,8 @@ function new_row_yinfo()
 }
 
 function render_measure_row(x, paper, x_global_scale, transpose, half_type,
-		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw, staff, theme)
+		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw, staff, theme,
+		first_block_first_row, inner_reharsal_mark)
 {
 	/* Reference reserved width for empty measures or chord symbol without base names*/
 	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "icomoon");
@@ -2820,6 +2821,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		}
 		
 		// Draw header
+		var header_rs_area_width = 0;
+		var header_body_area_width = 0;
 		// Clef, Key, Begin Boundary, Time(1st one) are included in this area
 		for(var ei = 0; ei < elements.header.length; ++ei)
 		{
@@ -2834,6 +2837,12 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				m.renderprop.paper = paper;
 				x = r.x;
 				meas_start_x = r.bx;
+				
+				// Header 1. Reharsal mark in row
+				if(inner_reharsal_mark && rs_area_detected && first_block_first_row && ml == 0){
+					var g = raphaelTextWithBox(paper, meas_base_x, y_body_base, reharsal_group.name, 18);
+					header_body_area_width += g.getBBox().width;
+				}
 			}else if(e instanceof Time){
 				x += 4;
 				var hlw = 0;
@@ -2850,6 +2859,11 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				x += hlw;
 			}
 		}
+		
+		header_rs_area_width = x - meas_base_x;
+		
+		if(header_body_area_width > header_rs_area_width)
+			x += (header_body_area_width - header_rs_area_width);
 		
 		// Margin between header and body
 		x += param.header_body_margin;
@@ -3080,64 +3094,70 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 function getGlobalMacros(track)
 {
-	var macros_to_apply = {};
+	var global_macros = {};
 
-	macros_to_apply.title = "NO TITLE";
+	global_macros.title = "NO TITLE";
 	if( "TITLE" in track.macros ){
-		macros_to_apply.title = track.macros["TITLE"];
+		global_macros.title = track.macros["TITLE"];
 	}
 
-	macros_to_apply.artist = "NO ARTIST";
+	global_macros.artist = "NO ARTIST";
 	if( "ARTIST" in track.macros ){
-		macros_to_apply.artist = track.macros["ARTIST"];
+		global_macros.artist = track.macros["ARTIST"];
 	}
 	
-	macros_to_apply.x_global_scale = 1.0;
+	global_macros.x_global_scale = 1.0;
 	if( "XSCALE" in track.macros ){
-		macros_to_apply.x_global_scale = parseFloat(track.macros["XSCALE"]);
+		global_macros.x_global_scale = parseFloat(track.macros["XSCALE"]);
 	}
 	
-	macros_to_apply.transpose = 0;
+	global_macros.transpose = 0;
 	if( "TRANSPOSE" in track.macros)
 	{
 		var t = parseInt(track.macros["TRANSPOSE"]);
 		if(!isNaN(t))
-			macros_to_apply.transpose = t;
+			global_macros.transpose = t;
 	}
 	
-	macros_to_apply.half_type = "GUESS";
+	global_macros.half_type = "GUESS";
 	if( "HALF_TYPE" in track.macros)
 	{
-		macros_to_apply.half_type = track.macros["HALF_TYPE"]; // "SHARP","FLAT","GUESS"
+		global_macros.half_type = track.macros["HALF_TYPE"]; // "SHARP","FLAT","GUESS"
 	}
 	
-	macros_to_apply.staff = "AUTO";
+	global_macros.staff = "AUTO";
 	if( "STAFF" in track.macros)
 	{
-		macros_to_apply.staff = track.macros["STAFF"];
+		global_macros.staff = track.macros["STAFF"];
 	}
 
-	macros_to_apply.row_margin = null;
+	global_macros.row_margin = null;
 	if( "ROW_MARGIN" in track.macros)
 	{
-		macros_to_apply.row_margin = parseInt(track.macros["ROW_MARGIN"]);
+		global_macros.row_margin = parseInt(track.macros["ROW_MARGIN"]);
 	}
 	
-	macros_to_apply.theme = "Default";
+	global_macros.theme = "Default";
 	if( "THEME" in track.macros)
 	{
-		macros_to_apply.theme = track.macros["THEME"];
+		global_macros.theme = track.macros["THEME"];
 	}
 	
-	macros_to_apply.reharsal_mark_position = "Default";
+	global_macros.reharsal_mark_position = "Default";
 	if( "REHARSAL_MARK" in track.macros)
 	{
-		macros_to_apply.reharsal_mark_position = track.macros["REHARSAL_MARK"];
+		global_macros.reharsal_mark_position = track.macros["REHARSAL_MARK"];
+		
+		if(global_macros.reharsal_mark_position == "Inner" && global_macros.staff != "ON"){
+			alert("REHARSAL_MARK=\"Inner\" needs to be specified with STAFF=\"ON\"");
+		}
 	}
 	
-	return macros_to_apply;
+	return global_macros;
 }
 
+// Compare global macros and rehearsal group macros. 
+// If rehearsal group macro is defined it is adopted.
 function getMacros(global_macros, rg)
 {
 	var macros_to_apply = $.extend(true, {}, global_macros); // Deep copy
@@ -3239,28 +3259,32 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 			console.group("Macro for " + track.reharsal_groups[i].name);
 			console.log(rg_macros);
 			console.groupEnd();
-			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i]});
+			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i],macros:rg_macros});
 			var rg = track.reharsal_groups[i];
 			for(var bi = 0; bi < rg.blocks.length; ++bi){
 				var block_measures = rg.blocks[bi];
 				var row_max_height = 0;
 				var meas_row = [];
 				var pm = null;
+				var row_id_in_block = 0;
 				for(var ml = 0; ml < block_measures.length; ++ml){
 					var m = block_measures[ml];
 					if(m.new_line){
 						y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
-							nm:m,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros});
+							nm:m,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros,
+							block_id:bi,row_id_in_block:row_id_in_block});
 						row_max_height = 0;
 						meas_row = [];
 						pm = ml>0?block_measures[ml-1]:null;
+						row_id_in_block += 1;
 					}
 					meas_row.push(m);
 					row_max_height = Math.max(row_max_height, m.renderprop.meas_height);
 				}
 				if(row_max_height > 0)
 					y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
-						nm:null,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros});
+						nm:null,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros,
+						block_id:bi,row_id_in_block:row_id_in_block});
 			}
 		}
 		
@@ -3288,11 +3312,12 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		for(var i = 0; i < track.reharsal_groups.length; ++i)
 		{
 			var rg_macros = getMacros(global_macros, track.reharsal_groups[i]);
-			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i]});
+			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i],macros:rg_macros});
 			var rg = track.reharsal_groups[i];
 			for(var bi = 0; bi < rg.blocks.length; ++bi){
 				y_stacks.push({type:'meas',height:0,cont:rg.blocks[bi],
-					nm:null,pm:null,rg:track.reharsal_groups[i],macros:rg_macros});
+					nm:null,pm:null,rg:track.reharsal_groups[i],macros:rg_macros,
+					block_id:bi,row_id_in_block:0});
 			}
 		}
 		pageslist.push(y_stacks);
@@ -3304,22 +3329,6 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	/* If reharsal group is drawn left side of the measures, calculte the offset */
 	if(!draw){
 		track.pre_render_info["meas_left_offset"] = 0;
-		var meas_left_offset = 0;
-		if( global_macros.reharsal_mark_position == "Left"){
-			for(var pageidx = 0; pageidx < pageslist.length; ++pageidx){
-				var yse = pageslist[pageidx];
-				for(var pei = 0; pei < yse.length; ++pei){ // Loop each y_stacks
-					if(yse[pei].type == 'reharsal'){
-						var rg = yse[pei].cont;
-						var g = raphaelTextWithBox(paper, x_offset, y_base, rg.name, 18);
-						meas_left_offset = Math.max(g.getBBox().width, meas_left_offset);
-						g.remove();
-					}
-				}
-			}
-			meas_left_offset += 10;
-		}
-		track.pre_render_info["meas_left_offset"] = meas_left_offset;
 	}
 	
 	if(async_mode){
@@ -3333,15 +3342,14 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 				
 				if(yse.type == 'titles'){
 					
-				}else if(yse.type == 'reharsal'){
+				}else if(yse.type == 'reharsal' && yse.macros.reharsal_mark_position != "Inner"){
 					var rg = yse.cont;
 					
 					if(ctx2.draw){
 						var g = raphaelTextWithBox(ctx2.paper, x_offset, ctx2.y_base, rg.name, 18);
 					}
 					
-					if( ! (global_macros.reharsal_mark_position == "Left") )
-						ctx2.y_base += ctx2.param.rm_area_height; // Reharsal mark area height
+					ctx2.y_base += ctx2.param.rm_area_height; // Reharsal mark area height
 					
 				}else if(yse.type == 'meas'){
 					var row_elements_list = yse.cont;
@@ -3350,7 +3358,9 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose, 
 							yse.macros.half_type, row_elements_list, yse.rg, yse.pm, yse.nm,
 							ctx2.y_base, ctx2.param, ctx2.draw,
-							yse.macros.staff, global_macros.theme);
+							yse.macros.staff, global_macros.theme,
+							(yse.block_id==0 && yse.row_id_in_block==0),
+							yse.macros.reharsal_mark_position=="Inner");
 					ctx2.y_base = r.y_base;
 				}
 				
@@ -3388,15 +3398,14 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 			for(var pei = 0; pei < yse.length; ++pei){ // Loop each y_stacks
 				if(yse[pei].type == 'titles'){
 					
-				}else if(yse[pei].type == 'reharsal'){
+				}else if(yse[pei].type == 'reharsal' && yse[pei].macros.reharsal_mark_position != "Inner"){
 					var rg = yse[pei].cont;
 					
 					if(draw){
 						var g = raphaelTextWithBox(paper, x_offset, y_base, rg.name, 18);
 					}
-					if( ! (global_macros.reharsal_mark_position == "Left") )
-						y_base += param.rm_area_height; // Reharsal mark area height
 					
+					y_base += param.rm_area_height; // Reharsal mark area height
 				}else if(yse[pei].type == 'meas'){
 					var row_elements_list = yse[pei].cont;
 					var r = render_measure_row(
@@ -3404,7 +3413,9 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							paper, yse[pei].macros.x_global_scale, yse[pei].macros.transpose,
 							yse[pei].macros.half_type, row_elements_list, 
 							yse[pei].rg, yse[pei].pm, yse[pei].nm,
-							y_base, param, draw, yse[pei].macros.staff, global_macros.theme);
+							y_base, param, draw, yse[pei].macros.staff, global_macros.theme,
+							(yse[pei].block_id==0 && yse[pei].row_id_in_block==0),
+							yse[pei].macros.reharsal_mark_position == "Inner");
 					y_base = r.y_base;
 				}
 			}

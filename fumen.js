@@ -3452,6 +3452,7 @@ function draw_segno(paper, x, y, segno)
 {
 	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619'); 
 	var path3001 = rsr.path("m 7.45119,0.00462507 c -2.62006,-0.12965 -4.89531,2.48917003 -4.5203,5.06077003 0.30852,2.3265 2.16735,4.12974 4.20376,5.1011599 1.65879,0.86938 3.71404,0.71264 5.22694,1.90481 1.39044,1.02552 1.92776,3.15917 0.89399,4.61515 -0.59006,0.8633 -1.60565,1.57525 -2.69669,1.40546 -0.51026,-0.79781 -0.0548,-1.84761 -0.5841,-2.65244 -0.50017,-0.97685 -1.7314,-1.52668 -2.77051,-1.09339 -1.09273,0.36861 -1.55201,1.78786 -0.96315,2.76184 0.95747,1.95409 3.44952,2.65453 5.45383,2.15374 2.52866,-0.60348 4.08162,-3.66205 3.0424,-6.05383 -0.87324,-2.27646 -3.05164,-3.8349199 -5.33435,-4.4943599 -1.63211,-0.39445 -3.53265,-0.67749 -4.56541,-2.16526 -0.96216,-1.25884 -0.91035,-3.20529 0.26205,-4.31632 0.58015,-0.61405 1.43392,-1.05559 2.29618,-0.91468 0.51027,0.79781 0.0548,1.84762 0.5841,2.65244 0.50017,0.97686 1.7314,1.52668 2.77051,1.09339 1.0378,-0.35178 1.53161,-1.67674 1.0195,-2.63799 C 11.07123,0.77410507 9.16303,-0.05833493 7.45119,0.00462507 z"); path3001.attr({id: 'path3001',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '50',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3001'); var path3807 = rsr.path("m 15.97079,8.1489251 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3807.attr({id: 'path3807',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3807'); var path3822 = rsr.path("m 3.38842,11.049785 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3822.attr({id: 'path3822',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3822'); var path3803 = rsr.path("M 15.69138,2.8164551 C 10.46092,7.2657851 5.23046,11.715125 0,16.164455 c 0.68845,-0.002 1.37691,-0.003 2.06536,-0.005 5.21598,-4.44988 10.43195,-8.8997599 15.64793,-13.3496399 -0.67397,0.002 -1.34794,0.004 -2.02191,0.007 z"); path3803.attr({id: 'path3803',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '49.9',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3803'); var rsrGroups = [];
+	// Need to note raphael set is not g tag in svg element. Then need to make 2 groups here to apply different tranform.
 	var group1 = rsr.set();
 	
 	group1.push(path3001, path3807, path3822, path3803);
@@ -3460,14 +3461,19 @@ function draw_segno(paper, x, y, segno)
 	var h = group1.getBBox().height;
 	
 	var group2 = rsr.set();
-	//group2.push(group1);
 	if(segno.number !== null)
 		group2.push( raphaelText(paper, group1.getBBox().width, h + 5, segno.number, 20, "lb"));
+
 	if(segno.opt !== null)
 		group2.push( raphaelText(paper, group1.getBBox().width + group2.getBBox().width, h + 3, "("+segno.opt+")", 16, "lb"));
 	
-	group2.transform("t"+x +","+(y-1));
-	return rsr.set([group1,group2]);
+	// Empty set in the super set will return invalid getBBox(), then need to judge if group2 is valid set ... X(
+	if(segno.number !== null || segno.opt !== null){
+		group2.transform("t"+x +","+(y-1));
+		return rsr.set([group1,group2]);
+	}else{
+		return group1;
+	}
 }
 
 function draw_coda(paper, x, y, align, coda)

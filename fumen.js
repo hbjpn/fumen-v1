@@ -3461,14 +3461,18 @@ function draw_segno(paper, x, y, segno)
 	var h = group1.getBBox().height;
 	
 	var group2 = rsr.set();
-	if(segno.number !== null)
+	var group2_valid = false;
+	if(segno.number !== null){
 		group2.push( raphaelText(paper, group1.getBBox().width, h + 5, segno.number, 20, "lb"));
+		group2_valid = true;
+	}
 
-	if(segno.opt !== null)
-		group2.push( raphaelText(paper, group1.getBBox().width + group2.getBBox().width, h + 3, "("+segno.opt+")", 16, "lb"));
-	
+	if(segno.opt !== null){
+		group2.push( raphaelText(paper, group1.getBBox().width + (group2_valid ? group2.getBBox().width : 0), h + 3, "("+segno.opt+")", 16, "lb"));
+		group2_valid = true;
+	}
 	// Empty set in the super set will return invalid getBBox(), then need to judge if group2 is valid set ... X(
-	if(segno.number !== null || segno.opt !== null){
+	if(group2_valid){
 		group2.transform("t"+x +","+(y-1));
 		return rsr.set([group1,group2]);
 	}else{

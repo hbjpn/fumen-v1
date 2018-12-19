@@ -3106,6 +3106,11 @@ function getGlobalMacros(track)
 		global_macros.artist = track.macros["ARTIST"];
 	}
 	
+	global_macros.sub_title = "";
+	if( "SUB_TITLE" in track.macros ){
+		global_macros.sub_title = track.macros["SUB_TITLE"];
+	}
+	
 	global_macros.x_global_scale = 1.0;
 	if( "XSCALE" in track.macros ){
 		global_macros.x_global_scale = parseFloat(track.macros["XSCALE"]);
@@ -3237,6 +3242,10 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	// Title
 	if(draw) raphaelText(paper, x_offset + width/2, y_title_offset, global_macros.title, 24, "ct"); 
 	songname = global_macros.title;
+
+	// Sub Title
+	if(draw && global_macros.sub_title != "")
+		raphaelText(paper, x_offset + width/2, y_title_offset + 28, global_macros.sub_title, 14, "ct"); 
 
 	// Artist
 	if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt"); 		

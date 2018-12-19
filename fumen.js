@@ -21,22 +21,22 @@ var Fumen = (function(){
 var CHORD_RENDER_THEME = {
 "Default":{
 	"_base_font_size" : 18,
-	"_base_font_family" : "icomoon",
+	"_base_font_family" : "realbook_music_symbol",
 	"_on_bass_font_size" : 18,
 	"_on_bass_style" : "/",
 	"_on_bass_yshift" : 0, 
 	"_3rd_global_dy" : 2,
 	"_3rd_font_profile" : {
-		'M'   : function(p){return [[16,0,'M']];},
-		'm'   : function(p){return [[16,0,'m']];}
+		'M'   : function(p){return [[12,2,'M']];},
+		'm'   : function(p){return [[12,2,'m']];}
 	},
 	"_6791113_global_dy" : 2,
 	"_6791113_font_profile" : {
-		'dim' : function(p){return [[16,0,"d"]];},
-		'sus' : function(p){return [[18,0,"s"],[13,4,p?p:""]];},
-		'M'   : function(p){return [[16,0,"M"],[13,4,p?p:""]];},
-		'm'   : function(p){return [[16,0,"m"]];},
-		'add' : function(p){return [[20,0,"a"],[13,4,p?p:""]];},
+		'dim' : function(p){return [[12,2,"d"]];},
+		'sus' : function(p){return [[10,3,"s"],[13,4,p?p:""]];},
+		'M'   : function(p){return [[12,2,"M"],[13,4,p?p:""]];},
+		'm'   : function(p){return [[12,2,"m"]];},
+		'add' : function(p){return [[12,2,"a"],[13,4,p?p:""]];},
 		'dig' : function(p){
 				if(!p) p = "";
 				else if(p=="11") p = "\x25";
@@ -2714,7 +2714,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		first_block_first_row, inner_reharsal_mark)
 {
 	/* Reference reserved width for empty measures or chord symbol without base names*/
-	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "icomoon");
+	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "realbook_music_symbol");
 	var C7_width = text.getBBox().width;
 	text.remove();
 	
@@ -2848,9 +2848,9 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				x += 4;
 				var hlw = 0;
 				var lx = x;
-				var textn = raphaelText(paper, lx, y_rs_area_base,                e.numer, 12, "lt", "icomoon");
+				var textn = raphaelText(paper, lx, y_rs_area_base,                e.numer, 12, "lt", "realbook_music_symbol");
 				hlw = textn.getBBox().width;
-				var textd = raphaelText(paper, lx, y_rs_area_base + param.row_height/2, e.denom, 12, "lt", "icomoon");
+				var textd = raphaelText(paper, lx, y_rs_area_base + param.row_height/2, e.denom, 12, "lt", "realbook_music_symbol");
 				hlw = Math.max(hlw, textd.getBBox().width);
 				textn.attr({'x':textn.attr('x') + (hlw - textn.getBBox().width)/2});
 				textd.attr({'x':textd.attr('x') + (hlw - textd.getBBox().width)/2});
@@ -2942,14 +2942,14 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				var oy = yoffsets[rd];
 				var fs = 14;
 				if(rd <= 4){
-					var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2, cmap[rd], fs, "lc", "icomoon");
+					var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2, cmap[rd], fs, "lc", "realbook_music_symbol");
 					rg.push(text);
 				}else{
 					var nKasane = myLog2(rd) - 2;
 					var rdx = 2;
 					var rdy = -7;
 					for(var k = 0; k < nKasane; ++k){
-						var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "icomoon");
+						var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "realbook_music_symbol");
 						rg.push(text);
 					}
 				}
@@ -3052,7 +3052,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 						lx, y_body_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
 				if(draw) paper.path(svgLine(rx, y_body_base + rh * vlmargin,
 						rx, y_body_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
-				if(draw) raphaelText(paper, (sx+fx)/2, y_body_base, e.longrestlen, 14, "cm","icomoon");
+				if(draw) raphaelText(paper, (sx+fx)/2, y_body_base, e.longrestlen, 14, "cm","realbook_music_symbol");
 			}else{
 				throw "Unkown measure wide instance detected";
 			}
@@ -3210,7 +3210,7 @@ function Initialize()
 	// Pre-load web-fonts because BBox of the fonts can not be correctly retrieved
 	// for the first-rendered fonts. This may be a browser bug ?
 	var paper = makeDammyPaper();
-	var FONT_FAMILIES=["icomoon","Arial"]; // List all the fonts used
+	var FONT_FAMILIES=["realbook_music_symbol","Arial"]; // List all the fonts used
 	for(var i=0; i < FONT_FAMILIES.length; ++i){
 		var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt",FONT_FAMILIES[i]);
 	}

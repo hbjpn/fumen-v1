@@ -1,0 +1,110 @@
+@font-face {
+  font-family: 'realbook_music_symbol';
+  src:  url('fonts/realbook_music_symbol.eot?vlhv7n');
+  src:  url('fonts/realbook_music_symbol.eot?vlhv7n#iefix') format('embedded-opentype'),
+    url('fonts/realbook_music_symbol.ttf?vlhv7n') format('truetype'),
+    url('fonts/realbook_music_symbol.woff?vlhv7n') format('woff'),
+    url('fonts/realbook_music_symbol.svg?vlhv7n#realbook_music_symbol') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+[class^="icon-"], [class*=" icon-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: 'realbook_music_symbol' !important;
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-1:before {
+  content: "\31";
+}
+.icon-2:before {
+  content: "\32";
+}
+.icon-3:before {
+  content: "\33";
+}
+.icon-4:before {
+  content: "\34";
+}
+.icon-5:before {
+  content: "\35";
+}
+.icon-6:before {
+  content: "\36";
+}
+.icon-7:before {
+  content: "\37";
+}
+.icon-8:before {
+  content: "\38";
+}
+.icon-9:before {
+  content: "\39";
+}
+.icon-11:before {
+  content: "\25";
+}
+.icon-13:before {
+  content: "\26";
+}
+.icon-A:before {
+  content: "\41";
+}
+.icon-add:before {
+  content: "\61";
+}
+.icon-B:before {
+  content: "\42";
+}
+.icon-C:before {
+  content: "\43";
+}
+.icon-D:before {
+  content: "\44";
+}
+.icon-dim:before {
+  content: "\64";
+}
+.icon-E:before {
+  content: "\45";
+}
+.icon-F:before {
+  content: "\46";
+}
+.icon-flag:before {
+  content: "\66";
+}
+.icon-flat:before {
+  content: "\62";
+}
+.icon-G:before {
+  content: "\47";
+}
+.icon-MA:before {
+  content: "\4d";
+}
+.icon-MI:before {
+  content: "\6d";
+}
+.icon-rest4:before {
+  content: "\e918";
+}
+.icon-rest8:before {
+  content: "\e919";
+}
+.icon-sharp:before {
+  content: "\23";
+}
+.icon-sus:before {
+  content: "\73";
+}

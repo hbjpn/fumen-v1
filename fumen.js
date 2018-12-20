@@ -2968,13 +2968,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				chord_name_str = e.chord_name_str;
 			}else if(e instanceof Rest){
 				var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
-				var yoffsets = {1:0, 2:0, 4:0, 8:0, 16:7, 32:7, 64:14, 128:14};
+				var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14, 128:14};
 				var rd = parseInt(e.length_s);
 				var rg = paper.set();
 				var oy = yoffsets[rd];
 				var fs = 14;
 				if(rd <= 4){
-					var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2, cmap[rd], fs, "lc", "realbook_music_symbol");
+					var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2 + oy, cmap[rd], fs, "lc", "realbook_music_symbol");
 					rg.push(text);
 				}else{
 					var nKasane = myLog2(rd) - 2;

@@ -22,21 +22,24 @@ var CHORD_RENDER_THEME = {
 "Default":{
 	"_base_font_size" : 18,
 	"_base_font_family" : "realbook_music_symbol",
+	"_base_font_profile" :{
+	},
 	"_on_bass_font_size" : 18,
-	"_on_bass_style" : "/",
-	"_on_bass_yshift" : 0, 
+	"_on_bass_global_dy" : 0,
+	"_on_bass_font_profile" :{
+	}, 
 	"_3rd_global_dy" : 2,
 	"_3rd_font_profile" : {
-		'M'   : function(p){return [[12,2,'M']];},
-		'm'   : function(p){return [[12,2,'m']];}
+		'M'   : function(p){return [[10,3,'M']];},
+		'm'   : function(p){return [[10,3,'m']];}
 	},
 	"_6791113_global_dy" : 2,
 	"_6791113_font_profile" : {
-		'dim' : function(p){return [[12,2,"d"]];},
-		'sus' : function(p){return [[10,3,"s"],[13,4,p?p:""]];},
-		'M'   : function(p){return [[12,2,"M"],[13,4,p?p:""]];},
-		'm'   : function(p){return [[12,2,"m"]];},
-		'add' : function(p){return [[12,2,"a"],[13,4,p?p:""]];},
+		'dim' : function(p){return [[11,2,"d"]];},
+		'sus' : function(p){return [[ 8,3,"s"],[13,4,p?p:""]];},
+		'M'   : function(p){return [[10,3,"M"],[13,4,p?p:""]];},
+		'm'   : function(p){return [[10,3,"m"]];},
+		'add' : function(p){return [[10,3,"a"],[13,4,p?p:""]];},
 		'dig' : function(p){
 				if(!p) p = "";
 				else if(p=="11") p = "\x25";
@@ -61,9 +64,16 @@ var CHORD_RENDER_THEME = {
 "Arial":{
 	"_base_font_size" : 20,
 	"_base_font_family" : "Arial",
-	"_on_bass_font_size" : 15, 
-	"_on_bass_style" : "/", 
-	"_on_bass_yshift" : 1,
+	"_base_font_profile" :{
+		'#'   : function(p){return [[14,0,'#','smart_music_symbol']];},
+		'b'   : function(p){return [[14,0,'b','smart_music_symbol']];},
+	},
+	"_on_bass_font_size" : 15,
+	"_on_bass_global_dy" : 1,
+	"_on_bass_font_profile" :{
+		'#'   : function(p){return [[13,0,'#','smart_music_symbol']];},
+		'b'   : function(p){return [[13,0,'b','smart_music_symbol']];},
+	},
 	"_3rd_global_dy" : 1,
 	"_3rd_font_profile" : {
 		'M'   : function(p){return [[16,0,'M']];},
@@ -92,8 +102,8 @@ var CHORD_RENDER_THEME = {
 	"_altered_global_dy" : -8,
 	"_multi_altered_margin" : -4,
 	"_altered_font_profile" : {
-		'#'   : function(p){return [[13,0,'#'],[13,0,p]];},
-		'b'   : function(p){return [[13,0,'b'],[13,0,p]];},
+		'#'   : function(p){return [[13,0,'#','smart_music_symbol'],[13,0,p]];},
+		'b'   : function(p){return [[13,0,'b','smart_music_symbol'],[13,0,p]];},
 		'alt' : function(p){return [[13,0,'alt']];}
 	}
 }
@@ -2349,9 +2359,23 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	var fontfamily = fp["_base_font_family"];
 	
 	if(bases[0]){
-		text = raphaelText(paper, xl, y_body_base + row_height/2, bases[0], fp["_base_font_size"], "lc", fontfamily);
-		group.push(text);
-		xl += text.getBBox().width	;
+		var base_width = 0;
+		for(var bi = 0; bi < bases[0].length; ++bi){
+		//text = raphaelText(paper, xl, y_body_base + row_height/2, bases[0][0], fp["_base_font_size"], "lc", fontfamily);
+		//var base_width = text.getBBox().width;
+		//group.push(text);
+		//if(bases[0].length==2){
+			var fp2 = (bases[0][bi] in fp["_base_font_profile"]) ? fp["_base_font_profile"][bases[0][bi]]() : null;
+			var _b2_font_family = (fp2 && fp2[0][3]) ? fp2[0][3] : fontfamily;
+			var _b2_font_size = fp2 ? fp2[0][0] : fp["_base_font_size"];
+			var _b2_char = fp2 ? fp2[0][2] : bases[0][bi];
+			var _b2_yoffset = fp2 ? fp2[0][1] : 0;
+			text = raphaelText(paper, xl + base_width, y_body_base + row_height/2 + _b2_yoffset, 
+				_b2_char, _b2_font_size, "lc", _b2_font_family);
+			base_width += text.getBBox().width;
+			group.push(text);
+		}
+		xl += base_width;
 	}
 	
 	var wb3 = 0;
@@ -2415,7 +2439,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 			text = raphaelText(paper,
 					xl + brace_margin + tw,
 					y_body_base + row_height/2 + ah + rp[k][1] + fp["_altered_global_dy"],
-					rp[k][2], rp[k][0], "lc", fontfamily);
+					rp[k][2], rp[k][0], "lc", (rp[k][3]?rp[k][3]:fontfamily));
 			group.push(text);
 			tw += text.getBBox().width;
 			th = Math.max(th, text.getBBox().height);
@@ -2444,12 +2468,20 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	xl += aw;
 	if(bases[1])
 	{
-		text = raphaelText(paper, xl, y_body_base + row_height/2 + fp["_on_bass_yshift"], fp["_on_bass_style"], fp["_on_bass_font_size"], "lc");
-		group.push(text);
-		xl += text.getBBox().width;
-		text = raphaelText(paper, xl, y_body_base + row_height/2 + fp["_on_bass_yshift"], bases[1], fp["_on_bass_font_size"], "lc", fontfamily);
-		group.push(text);
-		xl += text.getBBox().width;
+		var bassstr = "/"+bases[1];
+		var on_bass_width = 0;
+		for(var obi = 0; obi < bassstr.length; ++obi){
+			var fp2 = (bassstr[obi] in fp["_on_bass_font_profile"]) ? fp["_on_bass_font_profile"][bassstr[obi]]() : null;
+			var _b2_font_family = (fp2 && fp2[0][3]) ? fp2[0][3] : fontfamily;
+			var _b2_font_size = fp2 ? fp2[0][0] : fp["_on_bass_font_size"];
+			var _b2_char = fp2 ? fp2[0][2] : bassstr[obi];
+			var _b2_yoffset = fp2 ? fp2[0][1] : 0;
+			text = raphaelText(paper, xl + on_bass_width, y_body_base + row_height/2 + fp["_on_bass_global_dy"] + _b2_yoffset, 
+				_b2_char, _b2_font_size, "lc", _b2_font_family);
+			on_bass_width += text.getBBox().width;
+			group.push(text);
+		}
+		xl += on_bass_width;
 	}
 
 	x += group.getBBox().width * x_global_scale * body_scaling;

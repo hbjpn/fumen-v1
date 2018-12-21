@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'smart_music_symbol';
-  src:  url('fonts/smart_music_symbol.eot?lvjscj');
-  src:  url('fonts/smart_music_symbol.eot?lvjscj#iefix') format('embedded-opentype'),
-    url('fonts/smart_music_symbol.ttf?lvjscj') format('truetype'),
-    url('fonts/smart_music_symbol.woff?lvjscj') format('woff'),
-    url('fonts/smart_music_symbol.svg?lvjscj#smart_music_symbol') format('svg');
+  src:  url('fonts/smart_music_symbol.eot?6d1gow');
+  src:  url('fonts/smart_music_symbol.eot?6d1gow#iefix') format('embedded-opentype'),
+    url('fonts/smart_music_symbol.ttf?6d1gow') format('truetype'),
+    url('fonts/smart_music_symbol.woff?6d1gow') format('woff'),
+    url('fonts/smart_music_symbol.svg?6d1gow#smart_music_symbol') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -24,6 +24,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.icon-bnote:before {
+  content: "\e702";
+}
+.icon-flag_f:before {
+  content: "\e710";
+}
+.icon-flag_i:before {
+  content: "\e711";
+}
+.icon-w1note:before {
+  content: "\e700";
+}
+.icon-w2note:before {
+  content: "\e701";
+}
 .icon-flat:before {
   content: "\62";
 }

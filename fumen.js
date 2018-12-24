@@ -27,7 +27,7 @@ var CHORD_RENDER_THEME = {
 	"_on_bass_font_size" : 18,
 	"_on_bass_global_dy" : 0,
 	"_on_bass_font_profile" :{
-	}, 
+	},
 	"_3rd_global_dy" : 2,
 	"_3rd_font_profile" : {
 		'M'   : function(p){return [[10,3,'M']];},
@@ -201,7 +201,7 @@ function raphaelTextWithBox(paper, x, y, s, font_size)
 	var h = text.getBBox().height;
 	var margin_y = h * 0.0;
 	var margin_x = h * 0.1;
-	
+
 	var box = paper.rect(x, y, w + 2*margin_x, h + 2*margin_y);
 	text.attr("x",text.attr("x") + margin_x);
 	text.attr("y",text.attr("y") + margin_y);
@@ -222,8 +222,8 @@ function raphaelDownloadSvg(paper, filename)
 	var blob = new Blob([svgString], {type: 'image/svg+xml'});
 	a.href = (window.URL || webkitURL).createObjectURL(blob);
 	a.click();
-	
-	
+
+
 	//var link = document.createElement('link');
 	//link.rel = 'stylesheet';
 	//link.href = window.URL.createObjectURL(blob);
@@ -290,9 +290,9 @@ TaskQueue.prototype.finish = function(task)
 	// Finish notification from task
 	if(task.task_type === null)
 		return;
-	
+
 	if((!(task.task_type in this.task_queue)) ||
-	   (this.task_queue[task.task_type].length == 0) || 
+	   (this.task_queue[task.task_type].length == 0) ||
 	   (this.task_queue[task.task_type][0] != task)){
 		alert("Invalid task execution state detected");
 	}else{
@@ -316,7 +316,7 @@ TaskQueue.prototype.finish = function(task)
  * @param worker Worker function. worker function is called with context.
  *               Worker function can return followings
  *               Task : Returned new task is executed asynchronously
- *               Promise : 
+ *               Promise :
  *               Other : Returned value is handled to the callback function specified as a parameter of Task.then().
  *
  * @param queue Optional queue to use. If queue is not specified or null, global queue is used.
@@ -326,23 +326,23 @@ function Task(context, worker, task_type, queue)
 {
 	if(task_type === undefined)
 		task_type = null;
-	
+
 	this.task_type = task_type;
 	this.context = context;
 	this.worker = worker;
-	
+
 	this.promise = null;
 	this.resolve = null;
 	this.reject  = null;
-	
-	
+
+
 	var me = this;
 	// TODO : Promise.defer may be better, but chrome does not support it yet.
 	this.promise = new Promise(function(resolve, reject){
 		me.resolve = resolve;
 		me.reject = reject;
 	});
-	
+
 	queue = queue === undefined ? null : queue;
 	this.queue = (queue ? queue : the_task_queue);
 	this.queue.enqueue(this);
@@ -355,9 +355,9 @@ Task.prototype.then = function(func){
 
 
 Task.prototype.run = function(){
-	
+
 	var ret = this.worker(this.context);
-	
+
 	if( (ret instanceof Task) || (ret instanceof Promise)){
 		// Asynchronous execution of worker
 		var me = this;
@@ -371,7 +371,7 @@ Task.prototype.run = function(){
 			// finish notification will invoke a next task.
 			// It is required to wait a 1msec to keep order of the "then" and next task call.
 			setTimeout(me.queue.finish.bind(me.queue, me), 1);
-		});	
+		});
 	}else{
 		// End of task
 		// false, 0, true, ... all the values other than Task and undefined is land in here.
@@ -386,7 +386,7 @@ Task.prototype.run = function(){
 };
 
 /**
- * Enqueue function call. 
+ * Enqueue function call.
  * @param func  Function to call
  * @param arguments Arguments to func as array. arguments are applied to func with "apply" function.
  * @param task_type Queue indentifer
@@ -397,11 +397,11 @@ Task.enqueueFunctionCall = function(func, arguments, task_type)
 	return new Task({func:func, arguments:arguments, i:0, func_ret:undefined}, function(ctx){
 		if(ctx.i > 0)
 			return true; // Waste function's result : TODO : Handle function result to then
-		ret = ctx.func.apply(null, ctx.arguments); 
+		ret = ctx.func.apply(null, ctx.arguments);
 		ctx.func_ret = ret;
 		if(ret===undefined) ret = true; // Force to exit 1 time even if the function returns undefined.
 		++ctx.i;
-		return ret; 
+		return ret;
 	}, task_type); // Make one shot task
 };
 
@@ -413,7 +413,7 @@ Task._ForeachWorker = function(wc)
 		return wc2.worker(wc2.loopindex, wc2.looptarget.length, wc2.looptarget[wc2.loopindex],wc2.context);
 	}, 0, tempqueue);
 	var task = new Task(wc, function(wc2){
-		if(wc2.loopindex == wc2.looptarget.length - 1){ return wc2.context; }		
+		if(wc2.loopindex == wc2.looptarget.length - 1){ return wc2.context; }
 		var newwc = shallowcopy(wc2);
 		newwc.loopindex++;
 		return new Task(newwc, Task._ForeachWorker, null);
@@ -466,10 +466,10 @@ function Measure()
 	this.header_width = 0;
 	this.body_width = 0;
 	this.footer_width = 0;
-	
+
 	this.body_scaling = 1.0;
 	this.new_line = false;
-	
+
 	this.renderprop = {}; // Rendering information storage
 }
 
@@ -519,11 +519,11 @@ function parseChordMids(s)
 		//console.log(m);
 		if(m === null){
 			console.log("Invalid code notation : " + s);
-			return null;			
+			return null;
 		}
 		for(var i = 0; i < CS_LIST.length; ++i){
 			if(m[CS_IDX_OFFSET+CS_LIST[i]] !== undefined && m[CS_IDX_OFFSET+CS_LIST[i]] !== null){
-						
+
 				holder.push({cs:CS_LIST[i],s:m[0],g:m});
 				break;
 			}
@@ -536,10 +536,10 @@ function parseChordMids(s)
 	for(var i = 0; i < holder.length; ++i){
 		switch(holder[i].cs){
 		case CS_M:
-			var s = holder[i].s; 
+			var s = holder[i].s;
 			var isMaj = (s == "M" || s.toLowerCase() == "maj" || s.toLowerCase() == "ma");
 			if(isMaj == false) minor_exists = true;
-			
+
 			if(minor_exists && isMaj == true){
 				// mM7 Chord is expected
 				if(holder[i+1].cs == CS_DIG){
@@ -559,33 +559,33 @@ function parseChordMids(s)
 		case CS_SUS: objholder.push({type:'sus', param:holder[i].s.substr(3)});	break;
 		case CS_DIM: objholder.push({type:'dim'}); break;
 		case CS_MNS: objholder.push({type:'b', param:holder[i].s.substr(1)});	break;
-		case CS_PLS: objholder.push({type:'#', param:holder[i].s.substr(1)});	break; 
+		case CS_PLS: objholder.push({type:'#', param:holder[i].s.substr(1)});	break;
 		case CS_ADD: objholder.push({type:'add', param:holder[i].s.substr(3)});  break;
 		case CS_ALT: objholder.push({type:'alt'}); break;
 		}
 	}
 	//console.log(objholder);
-	
+
 	return [holder, objholder];
 };
 
 function Chord(chord_str)
 {
 	this.chord_str = chord_str;
-	
-	this.is_valid_chord = true;	
-	
+
+	this.is_valid_chord = true;
+
 	this.length = WHOLE_NOTE_LENGTH;
 	this.length_s = null;
 	this.tie = false;
-	
+
 	this.renderprop = {};
-	
+
 	this.exceptinal_comment = null;
 	this.lyric = null;
 
 	// Analyze Chord symbol
-	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(?:\/(A|B|C|D|E|F|G)(#|b)?)?)(:(\d+)(\.*))?(\~)?/;
+	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(?:\/(A|B|C|D|E|F|G)(#|b)?)?)(:(((\d+)(\.*))|(\(.*\))))?(\~)?/;
 	var m = chord_str.match(r);
 	//console.log(m);
 	// [0] is entire matched string
@@ -596,7 +596,7 @@ function Chord(chord_str)
 		this.mid_str = m[5];
 		this.base_note_base = m[6];
 		this.base_sharp_flat = m[7];
-		
+
 		this.mid_elems = null;
 		if(this.mid_str !== undefined){
 			var ret = parseChordMids(this.mid_str);
@@ -607,17 +607,17 @@ function Chord(chord_str)
 			this.is_valid_chord = (ret !== null);
 		}
 		if(m[8]){
-			var ps = m[10]?m[10]:"";
-			this.length_s = m[9]+(m[10]?m[10]:""); // "number + .";
-			this.length = WHOLE_NOTE_LENGTH / parseInt(m[9]);
-			var tp =  WHOLE_NOTE_LENGTH / parseInt(m[9]);
+			var ps = m[12]?m[12]:"";
+			this.length_s = m[11]+(m[12]?m[12]:""); // "number + .";
+			this.length = WHOLE_NOTE_LENGTH / parseInt(m[11]);
+			var tp =  WHOLE_NOTE_LENGTH / parseInt(m[11]);
 			for(var j = 0; j < ps.length; ++j){
 				tp /= 2;
 				this.length += tp;
 			}
 		}
-		
-		this.tie = (m[11] == '~');
+
+		this.tie = (m[14] == '~');
 	}else{
 		this.chord_name_str = this.chord_str;
 		this.is_valid_chord = false;
@@ -643,16 +643,16 @@ Chord.getTranpsoedNote = function(transpose, half_type, note_base, sharp_flat)
 		note += sharp_flat;
 
 	if(transpose == 0) return note;
-		
+
 	var i = 0;
 	for(i = 0; i < seq.length; ++i){
 		if(seq[i].indexOf(note) >= 0)
 			break;
 	}
-	
+
 	var k = i + transpose;
 	while( k < 0 ) k += 12;
-	
+
 	var s = seq[k%12];
 	if(s.length == 1){
 		return s[0];
@@ -682,7 +682,7 @@ Chord.prototype.getChordStrBase = function(tranpose, half_type)
 {
 	if(!this.is_valid_chord)
 		return [false,this.chord_str]; // Not chord or invalid chord notation
-	
+
 	var tranposed_note = null;
 	if(this.note_base !== undefined)
 		tranposed_note = Chord.getTranpsoedNote(tranpose, half_type, this.note_base, this.sharp_flat);
@@ -690,7 +690,7 @@ Chord.prototype.getChordStrBase = function(tranpose, half_type)
 	if(this.base_note_base !== undefined){
 		transposed_base_note = Chord.getTranpsoedNote(tranpose, half_type, this.base_note_base, this.base_sharp_flat);
 	}
-	
+
 	return [tranposed_note, transposed_base_note];
 };
 
@@ -896,7 +896,7 @@ Parser.prototype.onParseError = function(msg)
 Parser.prototype.nextToken = function(s, dont_skip_spaces)
 {
 	word_def = WORD_DEFINIITON_GENERAL;
-	
+
 	var skipped_spaces = 0;
 	if(!(dont_skip_spaces === true)){
 		while(s.length > 0 && charIsIn(s[0], ' 	')){
@@ -904,9 +904,9 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 			++skipped_spaces;
 		}
 	}
-	
+
 	if(s.length == 0) return {token:null, s:s, type:TOKEN_END, ss:skipped_spaces};
-	
+
 	// At first, plain string is analyzed irrespective of word_def.
 	if(s[0] == '"' || s[0] == "'" || s[0] == "`")
 	{
@@ -920,10 +920,10 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		var strclosed = (s.length > 0 && s[0] == quote);
 		if(!strclosed) this.onParseError("ERROR_WHILE_PARSING_PLAIN_STRING");
 		s = s.substr(1);
-		
+
 		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : (quote == "'" ? TOKEN_STRING_SQ : TOKEN_STRING_GRAVE_ACCENT)), ss:skipped_spaces};
 	}
-	
+
 	var r = charStartsWithAmong(s, ["||:","||.","||","|"]);
 	if(r != null){
 		return {token:r.s, s:s.substr(r.s.length), ss:skipped_spaces,
@@ -931,7 +931,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 				TOKEN_MB_LOOP_BEGIN, TOKEN_MB_FIN, TOKEN_MB_DBL, TOKEN_MB][r.index]
 		};
 	}
-	
+
 	var m = null;
 	m = s.match(/^(\:\|\|\:?)(x(\d+|X))?/); // ":||" or ":||:". Repeat number can be specified as "x<digit|n>"
 	if (m != null)
@@ -944,7 +944,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		}
 		return {token:m[0],s:s.substr(m[0].length), ss:skipped_spaces, type:(m[1]==":||:" ? TOKEN_MB_LOOP_BOTH : TOKEN_MB_LOOP_END),param:{times:loopTimes,ntimes:isNTimes}};
 	}
-	
+
 	var r = charIsIn(s[0], '[]<>(){},\n\/%=@:');
 	if(r != null){
 		return {token: s[0], s: s.substr(1), ss:skipped_spaces,
@@ -957,7 +957,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 				TOKEN_PERCENT, TOKEN_EQUAL, TOKEN_ATMARK, TOKEN_COLON][r.index]
 		};
 	}
-	
+
 	// "Word characters"
 	m = s.match(word_def);
 	if (m != null)
@@ -966,7 +966,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		var w = m[0];
 		return {token:w, s:s.substr(w.length), type:TOKEN_WORD, ss:skipped_spaces};
 	}
-	
+
 	throw "INVALID_TOKEN_DETECTED";
 	return {token:null, s:null, type:TOKEN_INVALID, ss:skipped_spaces};
 };
@@ -1013,7 +1013,7 @@ Parser.prototype.parseGroup = function(profile, s, errmsg)
 		}
 		tokens.push(l);
 	}
-	
+
 	return {tokens: tokens, s:s};
 };
 
@@ -1047,7 +1047,7 @@ Parser.prototype.parseLoopIndicator = function(trig_token_type, s)
 		if(r.type == TOKEN_BRACKET_RS) break;
 		else if(r.type != TOKEN_COMMA) this.onParseError("ERROR_WHILE_PARSE_LOOP_INDICATOR");
 	}
-	
+
 	return {loopIndicator: new LoopIndicator(indicators), s:s};
 };
 
@@ -1058,16 +1058,16 @@ Parser.prototype.parseLongRestIndicator = function(trig_token_type, s)
 
 	var r = this.nextToken(s);
 	s = r.s;
-	
+
 	if(r.type != TOKEN_WORD) this.onParseError("ERROR_WHILE_PARSE_OMIT_INDICATOR");
 
 	longrestlen = r.token;
-	
+
 	r = this.nextToken(s);
 	s = r.s;
-	
+
 	if(r.type != TOKEN_BRACKET_RW) this.onParseError("ERROR_WHILE_PARSE_OMIT_INDICATOR");
-	
+
 	return {longRestIndicator: new LongRestIndicator(longrestlen), s:s};
 };
 
@@ -1082,20 +1082,20 @@ Parser.prototype.parseTime = function(trig_token_type, s)
 	s = r.s;
 	if(r.type != TOKEN_WORD) this.onParseError("ERROR_WHILE_PARSE_TIME");
 	numer = r.token;
-	
+
 	r = this.nextToken(s);
 	s = r.s;
 	if(r.type != TOKEN_SLASH) this.onParseError("ERROR_WHILE_PARSE_TIME");
-	
+
 	r = this.nextToken(s);
 	s = r.s;
 	if(r.type != TOKEN_WORD) this.onParseError("ERROR_WHILE_PARSE_TIME");
 	denom = r.token;
-	
+
 	r = this.nextToken(s);
 	s = r.s;
 	if(r.type != TOKEN_BRACKET_RR) this.onParseError("ERROR_WHILE_PARSE_TIME");
-	
+
 	return {time: new Time(numer, denom), s:s};
 };
 
@@ -1104,13 +1104,13 @@ Parser.prototype.parseSign = function(trig_token_type, s)
 	// Read until ">" found
 	var index = s.indexOf(">");
 	if(index < 0) throw "Parse error on Sign(0)";
-	
+
 	var signStr = s.slice(0, index);
 	s = s.slice(index+1); // ">" is skipped
-	
+
 	// Parse sign string
 	// "D.S.([0-9]+)?( al Coda([0-9]+)?)
-	var r = this.nextToken(signStr, WORD_DEFINIITON_GENERAL); 
+	var r = this.nextToken(signStr, WORD_DEFINIITON_GENERAL);
 	if(r.type != TOKEN_WORD) throw "Parse error on Sign(1)";
 	regDS = /D\.S\.([0-9]+)?/;
 	regCoda = /Coda([0-9]+)?/;
@@ -1150,7 +1150,7 @@ Parser.prototype.parseSign = function(trig_token_type, s)
 	}else{
 		throw "Invalid token in parse sign";
 	}
-	
+
 	return {sign: sign, s:s};
 };
 
@@ -1163,7 +1163,7 @@ Parser.prototype.parseChordSymbol = function(trig_token, trig_token_type, s)
 	//      without any spaces are read as chord symbol.
 	//      Validtion of chord symbol notation is sperately conducted by
 	//      Chord class.
-	
+
 	chord_symbol = trig_token;
 	var m = s.match(WORD_DEFINITION_CHORD_SYMBOL);
 	if(m){
@@ -1193,7 +1193,7 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 	// note:
 	//   | or || or ||: or :|| at the end of the measure will "not" be consumed.
 	var measure = new Measure();
-	
+
 	if(trig_token_obj.type == TOKEN_MB)
 		measure.elements.push(new MeasureBoundaryMark(1));
 	else if(trig_token_obj.type == TOKEN_MB_DBL)
@@ -1206,7 +1206,7 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 		measure.elements.push(new LoopBothMark(trig_token_obj.param));
 	else if(trig_token_obj.type == TOKEN_MB_FIN)
 		measure.elements.push(new MeasureBoundaryFinMark());
-	
+
 	var loop_flg = true;
 	var atmark_detected = false;
 	var associated_chord = null;
@@ -1286,7 +1286,7 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 			break;
 		case TOKEN_MB_DBL:
 			measure.elements.push(new MeasureBoundaryMark(2));
-			loop_flg = false;		
+			loop_flg = false;
 			break;
 		case TOKEN_MB_LOOP_END:
 			measure.elements.push(new LoopEndMark(r.param));
@@ -1309,7 +1309,7 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 			break;
 		}
 	}
-	
+
 	return {measure: measure, s:s};
 };
 
@@ -1317,7 +1317,7 @@ Parser.prototype.parseMeasures = function(trig_token_obj, s, double_line_break)
 {
 	// prerequisite :
 	//   trig_token_obj == "|" or "||" or "||:" with params
-	// After calling this method, context will be out of measure context, that is, 
+	// After calling this method, context will be out of measure context, that is,
 	// last boundary will be consumed.
 	var measures = new Array();
 	var loop_flg = true;
@@ -1352,7 +1352,7 @@ Parser.prototype.parseMeasures = function(trig_token_obj, s, double_line_break)
 			break;
 		}
 	}
-	
+
 	return {measures:measures, s:s};
 };
 
@@ -1397,17 +1397,17 @@ Parser.prototype.parse = function(s)
 	s.replace(/\r/g,"\n");
 	var r = null;
 	var loop_cnt = 0;
-	
+
 	var track = new Track();
-	
+
 	var currentReharsalGroup = null;
 	var currentBlock = null;
-	
+
 	while(true){
 		r = this.nextToken(s);
 		//console.log(r);
 		if(r.type == TOKEN_END) break;
-		
+
 		if(r.type == TOKEN_NL){
 			this.context.line += 1;
 			this.context.contiguous_line_break += 1;
@@ -1460,7 +1460,7 @@ Parser.prototype.parse = function(s)
 		track.reharsal_groups.push(currentReharsalGroup);
 		currentReharsalGroup = null;
 	}
-	
+
 	// If same reharsal mark appears, preceeding one is applied
 	var rgmap = {};
 	for(var i = 0; i < track.reharsal_groups.length; ++i)
@@ -1472,7 +1472,7 @@ Parser.prototype.parse = function(s)
 			rgmap[rg.name] = rg;
 		}
 	}
-	
+
 	return track;
 };
 
@@ -1510,8 +1510,8 @@ function ctxlte(c0, c1)
 }
 
 /*
- * Sequencer class. 
- * 
+ * Sequencer class.
+ *
  * track : Track object including rendering information by Rederer object
  * cb_play : Callback function called when sequencer is played.
  * cb_stop : Callback function called when sequencer is stopped.
@@ -1525,17 +1525,17 @@ function Sequencer(track, cb_play, cb_stop, param)
 	if(param.auto_scroll === undefined) param.auto_scroll = false; // Auto scroll On/Off
 
 	this.param = param;
-	
+
 	this.sequence = [];
 	this.hasValidStructure = false;
-	
+
 	this.cb_play = cb_play == undefined ? null : cb_play;
 	this.cb_stop = cb_stop == undefined ? null : cb_stop;
-	
+
 	this.lastloopstart = {rg: null, m: null};
 	this.segnos = {};
-	
-	 
+
+
 	// Analyze musical structure
 	var ctx = { rgi: 0, bi: 0, mi: -1};
 	var at = function(c){
@@ -1560,10 +1560,10 @@ function Sequencer(track, cb_play, cb_stop, param)
 			return track.reharsal_groups[c.rgi].blocks[c.bi][c.mi];
 		} while( true );
 	};
-	
+
 	var current_time_mark = new Time(4,4);
 	var current_time = 0;
-	
+
 	var m = next(ctx);
 	var startm = m;
 	var startctx = deepcopy(ctx);
@@ -1580,7 +1580,7 @@ function Sequencer(track, cb_play, cb_stop, param)
 		}
 		var nextneeded = true;
 		var elems = classifyElements(m);
-		
+
 		// There is a limination that loop start and loop indicator can not exist in the same measure.
 		var jumploopindicator = false;
 		for( var ei = 0; ei < elems.measure_wide.length; ++ei){
@@ -1607,10 +1607,10 @@ function Sequencer(track, cb_play, cb_stop, param)
 				}
 			}
 		}
-		
+
 		if(jumploopindicator)
 			continue;
-		
+
 		// Check if long rest indicator exists. If exists, just duplicate sequence for that duration.
 		var longrest = null;
 		for( var ei = 0; ei < elems.measure_wide.length; ++ei){
@@ -1619,7 +1619,7 @@ function Sequencer(track, cb_play, cb_stop, param)
 				longrest = parseInt(e.longrestlen);
 			}
 		}
-		
+
 		for( var ei = 0; ei < elems.header.length; ++ei ){
 			var e = elems.header[ei];
 			if( e instanceof LoopBeginMark || e instanceof LoopBothMark){
@@ -1641,14 +1641,14 @@ function Sequencer(track, cb_play, cb_stop, param)
 				current_time_mark = e;
 			}
 		}
-		
+
 		if(longrest !== null){
 			for(var i = 0; i < longrest ; ++i){
 				var seqprop = {
 					t: current_time,
 					duration : (current_time_mark.numer / current_time_mark.denom)
 				};
-				
+
 				this.sequence.push([seqprop, m]);
 				current_time += seqprop.duration;
 			}
@@ -1658,15 +1658,15 @@ function Sequencer(track, cb_play, cb_stop, param)
 				t: current_time,
 				duration : (current_time_mark.numer / current_time_mark.denom)
 			};
-			
+
 			this.sequence.push([seqprop, m]);
 			current_time += seqprop.duration;
 		}
 
 		console.log("Push : ");
 		console.log(m);
-		console.log(seqprop);		
-		
+		console.log(seqprop);
+
 		var validfinedetected = false;
 
 		for ( var ei = 0; ei < elems.footer.length; ++ei){
@@ -1698,7 +1698,7 @@ function Sequencer(track, cb_play, cb_stop, param)
 					nextneeded = false;
 					// Loop should be reset in general.
 					// TODO : If segno is in the middle of loop, cur_loop should be set
-					// to the last loopbegin mark. 
+					// to the last loopbegin mark.
 					cur_loop = null;
 				}else{
 					throw "Segno not found";
@@ -1741,11 +1741,11 @@ function Sequencer(track, cb_play, cb_stop, param)
 				}
 			}
 		}
-		
+
 		if(validfinedetected){
 			break; // End of a song
 		}
-		
+
 		if(nextneeded){
 			m = next(ctx);
 		}
@@ -1764,12 +1764,12 @@ Sequencer.prototype.play = function(tempo)
 	}
 	this.timerStart = Date.now();
 	this.tempo_bpm = tempo;
-	
+
 	this.cmi = 0;
-	
+
 	var me = this;
 	this.timerid = setInterval(function(){ me.onClock();}, 100);
-	this.onClock(); 
+	this.onClock();
 	if(this.cb_play){
 		this.cb_play();
 	}
@@ -1791,23 +1791,23 @@ Sequencer.prototype.onClock = function()
 {
 	var now = Date.now();
 	var diff = now - this.timerStart; // ms
-	
+
 	var seq = this.sequence;
-	
+
 	var measure_length = (1.0 / this.tempo_bpm ) * 60 * 1000 * 4; // ms // TODO : "4" should be changed due to initial time mark.
-	
+
 	for(; this.cmi < seq.length; ++this.cmi){
-		if( diff >= seq[this.cmi][0].t * measure_length && 
+		if( diff >= seq[this.cmi][0].t * measure_length &&
 			diff < (seq[this.cmi][0].t + seq[this.cmi][0].duration) * measure_length){
 			break;
 		}
 	}
-	
+
 	if(this.cmi >= seq.length){
 		this.stop();
 		return;
 	}
-	
+
 	var m = seq[this.cmi][1];
 	var sx = m.renderprop.sx;
 	var ex = m.renderprop.ex;
@@ -1822,9 +1822,9 @@ Sequencer.prototype.onClock = function()
 };
 
 Renderer.prototype.render = function(track, async_mode, progress_cb)
-{	
+{
 	this.track = track;
-	
+
 	if(async_mode){
 		Task.enqueueFunctionCall(render_impl, [this.canvas, track, true, this.param, async_mode, progress_cb], "render");
 		Task.enqueueFunctionCall(identify_scaling, [track, this.param], "render");
@@ -1855,8 +1855,8 @@ function classifyElements(measure)
 			// Last element must be boundary
 			footer_elements.push(e);
 		}else{
-			
-			if(e instanceof Chord){	
+
+			if(e instanceof Chord){
 				body_elements.push(e);
 			}else if(e instanceof Rest){
 				body_elements.push(e);
@@ -1868,7 +1868,7 @@ function classifyElements(measure)
 				// Time mark is treated as header element irrespective of its positionat the second element is treated as header part
 				header_elements.push(e);
 			}else if(e instanceof DaCapo){
-				footer_elements.push(e);				
+				footer_elements.push(e);
 			}else if(e instanceof DalSegno){
 				footer_elements.push(e);
 			}else if(e instanceof Segno){
@@ -1886,13 +1886,13 @@ function classifyElements(measure)
 			}else if(e instanceof ArMark){
 				// Associate the Chord and Comment or Lyric symbols here
 				var chord = m.elements[ei-1];
-				var obj = m.elements[ei+1]; 
-				
+				var obj = m.elements[ei+1];
+
 			}
 		}
-		
+
 	}
-	
+
 	return {header:header_elements, body:body_elements, footer:footer_elements, measure_wide:measure_wide_elements};
 }
 
@@ -1925,20 +1925,20 @@ function identify_scaling(track, param)
 {
 	console.log("Identify scaling called");
 	var width = param.paper_width - param.x_offset * 2 - track.pre_render_info["meas_left_offset"];
-	
+
 	for(var i = 0; i < track.reharsal_groups.length; ++i)
 	{
 		var rg = track.reharsal_groups[i];
-		
+
 		for( var bi = 0; bi < rg.blocks.length; ++bi){
-		
+
 			var block_measures = rg.blocks[bi];
-		
+
 			var currentSumWidth = 0;
-		
+
 			var rows = new Array();
 			var row_measures = new Array();
-		
+
 			var vertical_align = true;
 			var force_even_measures_per_line = true;
 			if(vertical_align){
@@ -1947,19 +1947,19 @@ function identify_scaling(track, param)
 				var maxC = 0;
 				for(var ml = 0; ml < block_measures.length; ++ml){
 					maxC = ml+1;
-					var m = block_measures[ml];		
+					var m = block_measures[ml];
 					currentSumWidth += (m.header_width + m.body_width + m.footer_width);
-					//console.log(m.header_width + "/" + m.body_width + "/" + m.footer_width + ":" + currentSumWidth + " vs " + width);			
+					//console.log(m.header_width + "/" + m.body_width + "/" + m.footer_width + ":" + currentSumWidth + " vs " + width);
 					if(currentSumWidth > width){ maxC--; break; }
 				}
-			
+
 				//console.log("maxC = " + maxC);
 				var N = block_measures.length;
 				var C = maxC;
 				var meas_max_widths = new Array();
 				var Q_w_for_C = 0;
 				for(; C > 0; --C){
-					for(var c = 0; c < C; ++c){			
+					for(var c = 0; c < C; ++c){
 						var max_w_for_c = maxtor(block_measures, function(r){ return r*C+c; }, function(m){ return m.header_width + m.body_width + m.footer_width;});
 						Q_w_for_C += max_w_for_c;
 						meas_max_widths.push(max_w_for_c);
@@ -1980,7 +1980,7 @@ function identify_scaling(track, param)
 				// Now, C is number of columns per row
 				// Q_w_for_C is width of the row when number of column is C, that is, sum of the maximum width measure of each columns.
 				// meas_max_widths is width of the measure with maximum width in each column. Sum of meas_max_widths equals to Q_w_for_C.
-			
+
 				// Additional scaling to variable of width of columns
 				var limitvariation = true;
 				if(limitvariation){
@@ -1995,32 +1995,32 @@ function identify_scaling(track, param)
 						Q_w_for_C += meas_max_widths[c];
 					}
 				}
-			
+
 				// Calculate new body width and scaling
-				var reharsal_wide_scaling = width / Q_w_for_C; 
+				var reharsal_wide_scaling = width / Q_w_for_C;
 				for(var ml = 0; ml < block_measures.length; ++ml){
 					var m = block_measures[ml];
 					var row = Math.floor(ml / C);
 					var col = ml - row * C;
 					var new_body_width = meas_max_widths[col] * reharsal_wide_scaling - (m.header_width + m.footer_width);
 					m.new_line = ( col == 0 && row > 0 );
-					m.body_scaling = new_body_width / m.body_width; 
-					
+					m.body_scaling = new_body_width / m.body_width;
+
 					// Limit scaling to 1.00 for the case of single row to avoid the too much extension of the measure
 					// Physiological effect that 4 >= columns should occupy whole width.
 					if(block_measures.length == C && C <= 3){
 						m.body_scaling = Math.min(1.5, m.body_scaling);
 					}
 				}
-			
+
 			}else{
 				// Decide where to insert line-break
 				for(var ml = 0; ml < block_measures.length; ++ml){
 					var m = block_measures[ml];
-				
-					row_measures.push(m);			
+
+					row_measures.push(m);
 					currentSumWidth += (m.header_width + m.body_width + m.footer_width);
-				
+
 					if(currentSumWidth > width){
 						rows.push(row_measures);
 						row_measures = new Array();
@@ -2029,24 +2029,24 @@ function identify_scaling(track, param)
 				}
 				if( row_measures.length > 0 )
 					rows.push(row_measures);
-			
+
 				// Decide scaling factor for each measure.
 				// Align measure boundary as much as possible.
 				for(var ri = 0; ri < rows.length; ++ri)
 				{
 					var sumWidth = 0;
 					var sumFixedWidth = 0;
-				
+
 					for(var ml = 0; ml < rows[ri].length; ++ml){
 						var m = rows[ri][ml];
 						if(ri > 0 && ml == 0) m.new_line = true;
 						sumWidth += (m.header_width + m.body_width + m.footer_width);
 						sumFixedWidth += (m.header_width + m.footer_width);
 					}
-				
+
 					var newSumBodyWidth = width - sumFixedWidth;
 					if(newSumBodyWidth <= 0) throw "ERROR";
-				
+
 					var scaling = newSumBodyWidth / ( sumWidth - sumFixedWidth );
 					for(var ml = 0; ml < rows[ri].length; ++ml){
 						var m = rows[ri][ml];
@@ -2075,13 +2075,13 @@ function makeNewPaper(canvas, param)
 	paper = Raphael(paper_div, param.paper_width, param.paper_height);
 	pages.push(paper);
 	paper.canvas.style.backgroundColor = '#FFFFFF';
-	
+
 	// Logo:)
 	raphaelText(paper, param.paper_width/2, param.paper_height - 40, "Generated by fumen ver 0.1", 12, "ct");
-	
+
 	// Clear buffers
 	ChordRenderBuffer = {};
-	
+
 	return paper;
 }
 
@@ -2101,7 +2101,7 @@ function get_boundary_sign(e)
 	}else if(e instanceof MeasureBoundaryFinMark){
 		return 'f';
 	}
-	throw "Invalid boundary object";	
+	throw "Invalid boundary object";
 }
 
 function boundary_type_without_line_break(b0, b1)
@@ -2112,7 +2112,7 @@ function boundary_type_without_line_break(b0, b1)
 		"ss":"s", "sd":"d",           "sb":"b",           "sn":"s",
 		"ds":"d", "dd":"d",           "db":"b",           "dn":"d",
 		"es":"e", "ed":"e", "ee":"e", "eb":"B",           "en":"e",
-		                              "bb":"b", 
+		                              "bb":"b",
 		                                        "BB":"B",
 		                                                  "fn":"f",
 		"ns":"s", "nd":"d",           "nb":"b"
@@ -2149,7 +2149,7 @@ function boundary_type_with_line_break(b0, b1, side)
  * Draw boundary
  * @param side : 'begin' or 'end' of boundary for current measure
  * @param ec : Boundary element of current measure( <side> side )
- * @param en : Boundary element of neighbor measure. 
+ * @param en : Boundary element of neighbor measure.
  *             <en> must be 'begin' boundary of the next measure when <side> is 'end'
  *             <en> must be 'end' boundary of the previous measure when <side> is 'begin'
  *             <en> can be null if there is no next measure when <side> is 'end'.
@@ -2158,7 +2158,7 @@ function boundary_type_with_line_break(b0, b1, side)
  * @param paper : Paper object
  * @param x : Current x position
  * @param darw : Whether to draw or just estimating sizes
- * 
+ *
  * @return dictionary with following keys and values
  *             x : updated x position.
  */
@@ -2167,7 +2167,7 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 	var row_height = param.row_height;
 
 	var draw_type = null; // "s, d, lb, le, lb, f"
-	
+
 
 	var bx = x; // Actual boundary of measure. Depends on final drawn boundary type.
 
@@ -2175,7 +2175,7 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		var thisIsLastMeasureInLine = (e1 === null) || ( hasNewLine );
 		if(!thisIsLastMeasureInLine) return {x:x, bx:bx};
 	}
-	
+
 	if(hasNewLine === null || hasNewLine == false){
 		draw_type = boundary_type_without_line_break(e0, e1);
 	}else{
@@ -2223,7 +2223,7 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		bx = x;
 		x += 3;
 		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
-		
+
 		//x += 20;
 		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
 			stimes = e0.ntimes == true ? "X" : ""+e0.times;
@@ -2239,7 +2239,7 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"});
 		break;
 	default:
-		throw "Internal error";	
+		throw "Internal error";
 	}
 	return {x:x, bx:bx};
 }
@@ -2250,26 +2250,26 @@ function render_chord_as_string(chord, transpose, half_type, paper, x, y_body_ba
 	var row_height = param.row_height;
 
 	var group = paper.set();
-	
+
 	var text = raphaelText(paper, x, y_body_base + row_height/2, chord.chord_str, 16, "lc", null);
 	x += text.getBBox().width * x_global_scale * body_scaling;
 	x += (chord_space*body_scaling);
 	if(!draw) text.remove();
-	
+
 	group.push(text);
-	
+
 	return {group:group, x:x};
 }
 
 var ChordRenderBuffer = {
-		
+
 };
 
 function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		param, draw, C7_width, chord_space, x_global_scale, body_scaling, theme)
 {
 	var row_height = param.row_height;
-	
+
 	chord.renderprop.x = x;
 
 	if(!chord.is_valid_chord)
@@ -2277,9 +2277,9 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		return render_chord_as_string(chord, transpose, half_type, paper, x, y_body_base,
 				param, draw, chord_space, x_global_scale, body_scaling);
 	}
-	
+
 	var ref_p = [x, y_body_base];
-	
+
 	if(draw && chord.chord_name_str in ChordRenderBuffer)
 	{
 		var cl =  ChordRenderBuffer[chord.chord_name_str];
@@ -2294,11 +2294,11 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		}
 		return {group:group, x:x};
 	}
-	
+
 	var bases = chord.getChordStrBase(transpose, half_type);
 	var elems = chord.mid_elem_objs;
 	var group = paper.set();
-	
+
 	// if bases are null, elems are null, then it is just a duration information
 	if ( bases[0] == null && bases[1] == null && elems === undefined ){
 		x += (C7_width * x_global_scale * body_scaling + chord_space * body_scaling);
@@ -2308,8 +2308,8 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	var _3rdelem = [];
 	var _5thelem = [];
 	var _6791113suselem = [];
-	var _alteredelem = []; // #11, #9, b9, #13, b13, 
-	
+	var _alteredelem = []; // #11, #9, b9, #13, b13,
+
 	if(elems){
 		var _6exists = false, _9exists=false;
 		for(var i = 0; i < elems.length; ++i){
@@ -2336,9 +2336,9 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 				break;
 			case 'dim': _6791113suselem.push(e); break;
 			case 'alt': _alteredelem.push(e); break;
-			}		
+			}
 		}
-		
+
 		// Exception for 69 chord
 		if(_6exists && _9exists){
 			// 6th will be moved to 5th left upper position
@@ -2351,13 +2351,13 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 			}
 		}
 	}
-		
+
 	var text = null;
 	var xl = x;
-	
+
 	var fp = CHORD_RENDER_THEME[theme];
 	var fontfamily = fp["_base_font_family"];
-	
+
 	if(bases[0]){
 		var base_width = 0;
 		for(var bi = 0; bi < bases[0].length; ++bi){
@@ -2370,14 +2370,14 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 			var _b2_font_size = fp2 ? fp2[0][0] : fp["_base_font_size"];
 			var _b2_char = fp2 ? fp2[0][2] : bases[0][bi];
 			var _b2_yoffset = fp2 ? fp2[0][1] : 0;
-			text = raphaelText(paper, xl + base_width, y_body_base + row_height/2 + _b2_yoffset, 
+			text = raphaelText(paper, xl + base_width, y_body_base + row_height/2 + _b2_yoffset,
 				_b2_char, _b2_font_size, "lc", _b2_font_family);
 			base_width += text.getBBox().width;
 			group.push(text);
 		}
 		xl += base_width;
 	}
-	
+
 	var wb3 = 0;
 	if(_3rdelem.length > 0){
 		var rp = fp["_3rd_font_profile"][_3rdelem[0].type](_3rdelem[0].param);
@@ -2392,7 +2392,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		wb3 = tx;
 	}
 	var wbupper = 0;
-	
+
 	if(_5thelem.length > 0){
 		var rp = fp["_5th_font_profile"][_5thelem[0].type](_5thelem[0].param);
 		var tx = 0;
@@ -2405,7 +2405,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		}
 		wbupper = tx;
 	}
-	
+
 	var wblower = wb3;
 	if(_6791113suselem.length > 0){
 		var tx = 0;
@@ -2423,7 +2423,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		}
 		wblower += tx;
 	}
-	
+
 	xl += Math.max(wbupper, wblower);
 	var aw = 0;
 	var ah = 0; // Offset of y
@@ -2451,20 +2451,20 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		aw = Math.max(aw, tw);
 	}
 	if(_alteredelem.length > 0){
-		var brace_points_l = [[xl + brace_margin, a_min_y], [xl, a_min_y], 
+		var brace_points_l = [[xl + brace_margin, a_min_y], [xl, a_min_y],
 			[xl, a_max_y], [xl + brace_margin, a_max_y]];
 		var bl = paper.path(svgArcBezie(brace_points_l)).attr('stroke-width','1px');
-		
-		var brace_points_r = [[xl + brace_margin+aw, a_min_y], [xl+brace_margin+aw+5, a_min_y], 
+
+		var brace_points_r = [[xl + brace_margin+aw, a_min_y], [xl+brace_margin+aw+5, a_min_y],
 			[xl+brace_margin+aw+5, a_max_y], [xl+brace_margin+aw, a_max_y]];
 		var br = paper.path(svgArcBezie(brace_points_r)).attr('stroke-width','1px');
-		
+
 		group.push(bl);
 		group.push(br);
-		
+
 		aw += brace_margin * 2;
 	}
-	
+
 	xl += aw;
 	if(bases[1])
 	{
@@ -2476,7 +2476,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 			var _b2_font_size = fp2 ? fp2[0][0] : fp["_on_bass_font_size"];
 			var _b2_char = fp2 ? fp2[0][2] : bassstr[obi];
 			var _b2_yoffset = fp2 ? fp2[0][1] : 0;
-			text = raphaelText(paper, xl + on_bass_width, y_body_base + row_height/2 + fp["_on_bass_global_dy"] + _b2_yoffset, 
+			text = raphaelText(paper, xl + on_bass_width, y_body_base + row_height/2 + fp["_on_bass_global_dy"] + _b2_yoffset,
 				_b2_char, _b2_font_size, "lc", _b2_font_family);
 			on_bass_width += text.getBBox().width;
 			group.push(text);
@@ -2487,12 +2487,12 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	x += group.getBBox().width * x_global_scale * body_scaling;
 	x += (chord_space*body_scaling);
 	if(!draw) text.remove();
-	
+
 	if(draw){
 		var cloned = group.clone();
-		cloned.attr({opacity:0.0}); // Buffered symbol must not be shown on the score. 
+		cloned.attr({opacity:0.0}); // Buffered symbol must not be shown on the score.
 		ChordRenderBuffer[chord.chord_name_str] = [cloned, ref_p];
-	}	
+	}
 	if(!isFinite(x)){
 		console.error("Illegal calculation of x detected");
 	}
@@ -2512,7 +2512,7 @@ function raphaelSlash(paper, group, x, y, d, numdot)
 		obj = paper.path(path).attr({'stroke-width':'1px'});
 	}else{
 		// '0' and other
-		obj = paper.path(path).attr({'fill':'#000000'});		
+		obj = paper.path(path).attr({'fill':'#000000'});
 	}
 	group.push(obj);
 	for(var i = 0; i < numdot; ++i){
@@ -2576,26 +2576,26 @@ function draw_balken(paper, group, balken, rs_y_base, barlen, flagintv, balken_w
 		var pe = balken.groups[balken.groups.length-1].coord;
 		var b = paper.path(svgLine(ps[0],ps[1],pe[0],pe[1])).attr({'stroke-width':balken_width});
 		group.push(b);
-		
+
 		// Draw flag for balken
 		var gg = to_same_value_group(balken.groups, function(o){return o.onka;});
 		for(var g = 0; g < gg.length; ++g){
 			var same_sds = gg[g];
 			var sd = same_sds[0].onka;
 			var numflag = myLog2(parseInt(sd)) - 2;
-			
+
 			if(same_sds.length == 1)
 			{
 				var pss = same_sds[0].coord;
-				
-				// Determine which direction to draw flag. Determined from which neighboring 
+
+				// Determine which direction to draw flag. Determined from which neighboring
 				// rhythm is more natural to coupling with.
 				// Currently, simple strategy is adopted for now.
 				var dir = 1;
 				if(g == gg.length - 1) dir = -1;
 				var neighbor_x = gg[g + dir][ gg[g+dir].length - 1 ].coord[0];
 				var blen = Math.abs(neighbor_x - pss[0]) * 0.3;
-				
+
 				for(var fi = 0; fi < numflag; ++fi)
 				{
 					o = paper.path(svgLine(pss[0], rs_y_base+barlen-fi*flagintv, pss[0] + dir * blen, rs_y_base+barlen-fi*flagintv)).attr({'stroke-width':balken_width});
@@ -2634,7 +2634,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 		groups : [],
 		sum_len : 0
 	};
-	
+
 	var drawn = false;
 	var group = paper.set();
 	for(var ei = 0; ei < elems.length; ++ei){
@@ -2647,21 +2647,21 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 
 		var d = e.length_s.match(/[0-9]+/)[0];
 		var dots = e.length_s.substr(d.length);
-		
+
 		if(e instanceof Chord){
 			drawn = true;
 
 			if(d == '0' || d == '1'){
-				raphaelSlash(paper, group, x, rs_y_base, d, dots.length);			
+				raphaelSlash(paper, group, x, rs_y_base, d, dots.length);
 			}else{
 				raphaelSlash(paper, group, x, rs_y_base, d, dots.length);
 				var o = paper.path("M"+x+","+rs_y_base + "L"+x+","+(rs_y_base+barlen)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
 		}
-		
+
 		if(all_has_length){
-			var is_boundary = 
+			var is_boundary =
 				e.length >= WHOLE_NOTE_LENGTH/4 ||
 				(balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0);
 			if(is_boundary){
@@ -2680,7 +2680,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 				draw_balken(paper, group, balken, rs_y_base, barlen, flagintv, balken_width);
 			}
 		}
-			
+
 		if(e instanceof Chord){
 			if(rs_prev_has_tie){
 				// Draw tie line
@@ -2692,27 +2692,27 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 				if(ps[1] != pe[1]){
 					// Crossing measure row. Previous RS mark could be on another page.
 					// Make sure to create curve on the paper on which previous RS is drawn.
-					var brace_points = [[ps[0] + sdx,ps[1]+dy], [ps[0] + sdx, ps[1]-round+dy], 
+					var brace_points = [[ps[0] + sdx,ps[1]+dy], [ps[0] + sdx, ps[1]-round+dy],
 					                    [ps[3]+20, ps[1]-round+dy], [ps[3]+20,ps[1]+dy]];
 					clip = (ps[0]+sdx) + "," + (ps[1]-50) + ","+(ps[3]-(ps[0]+sdx)+5)+",100";
 					console.log("clip:"+clip);
-					
+
 					var bl = rs_prev_tie_paper.path(svgArcBezie(brace_points)).attr('stroke-width','2px').attr({'clip-rect':clip});
 					rs_prev_tie_paper.set().push(bl);
-					
-					brace_points = [[pe[2] - 20, pe[1]+dy], [pe[2] - 20, pe[1]-round+dy], 
+
+					brace_points = [[pe[2] - 20, pe[1]+dy], [pe[2] - 20, pe[1]-round+dy],
 					                    [pe[0], pe[1]-round+dy], [pe[0],pe[1]+dy]];
 					clip = (pe[2]-5) + "," + (pe[1]-50) + ","+(pe[0]-(pe[2]-5))+",100";
 					console.log("clip:"+clip);
 					bl = paper.path(svgArcBezie(brace_points)).attr('stroke-width','2px').attr({'clip-rect':clip});
-					group.push(bl);			
+					group.push(bl);
 				}else{
 					var brace_points = [[ps[0] + sdx,ps[1]+dy], [ps[0] + sdx, ps[1]-round+dy],
 					                    [pe[0], pe[1]-round+dy], [pe[0],pe[1]+dy]];
 					var bl = paper.path(svgArcBezie(brace_points)).attr('stroke-width','2px');
 					group.push(bl);
 				}
-				
+
 			}
 			rs_prev_has_tie = e.tie;
 			rs_prev_coord = [x, rs_y_base, meas_start_x, meas_end_x];
@@ -2736,7 +2736,7 @@ function new_row_yinfo()
 		maxheaerheight : 0,
 		maxbodyheight : 0,
 		maxfooterheight : 0,
-		maxheight: 0	
+		maxheight: 0
 	};
 	return rowyinfo;
 }
@@ -2749,17 +2749,17 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "realbook_music_symbol");
 	var C7_width = text.getBBox().width;
 	text.remove();
-	
+
 	var rs_area_detected = false; // Rhthm Slash Area
 	var mu_area_detected = false; // Measure Upper Area ( Above the chord symbol )
 	var ml_area_detected = false; // Measure Lower Area ( Blow the chord & rhythm slash area)
 	var lyric_rows = 0;
-	
+
 	//var draw_5line = false;
 	if(staff == "ON"){
 		rs_area_detected = true;
 	}
-	
+
 	// Screening of y-axis areas
 	for(var ml = 0; ml < row_elements_list.length; ++ml){
 		var m = row_elements_list[ml];
@@ -2779,15 +2779,15 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	if(staff == "OFF"){
 		rs_area_detected = false;
 	}
-	
+
 	var y_mu_area_base = y_base; // top of mu area(segno, coda, etc..)
 	var y_body_base = y_base + (mu_area_detected ? param.mu_area_height+param.below_mu_area_margin : 0); // top of chord area
 	var y_rs_area_base = y_body_base + (rs_area_detected ? (param.row_height+param.above_rs_area_margin) : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
-	var y_ml_area_base = y_body_base + param.row_height 
+	var y_ml_area_base = y_body_base + param.row_height
 			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
 			+ param.above_ml_area_margin;
-	
-	var y_next_base = y_body_base + param.row_height 
+
+	var y_next_base = y_body_base + param.row_height
 			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
 			+ (ml_area_detected ? lyric_rows * param.ml_row_height + param.above_ml_area_margin : 0)
 			+ param.row_margin;
@@ -2800,21 +2800,21 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	var measure_height = y_next_base - y_base;
 	var measure_heights = [];
-	
+
 	var first_meas_start_x = x;
 	var last_meas_end_x = x;
-	
+
 	for(var ml = 0; ml < row_elements_list.length; ++ml){
-		
+
 		var m = row_elements_list[ml];
-		
+
 		var meas_base_x = x;   // Start of this measure including boundary
 		var meas_start_x = x;  // Start of this measure excluding boundary
 		var meas_end_x = x;    // End of this measure
 		var mh_offset = 0; // Offset x in mh region
-		
+
 		var elements = classifyElements(m);
-		
+
 		// Draw sub header field ( Repeat signs )
 		var m_mu_area_detected = false;
 		var m_ml_area_detected = false;
@@ -2852,7 +2852,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				}
 			}
 		}
-		
+
 		// Draw header
 		var header_rs_area_width = 0;
 		var header_body_area_width = 0;
@@ -2870,7 +2870,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				m.renderprop.paper = paper;
 				x = r.x;
 				meas_start_x = r.bx;
-				
+
 				// Header 1. Reharsal mark in row
 				if(inner_reharsal_mark && rs_area_detected && first_block_first_row && ml == 0){
 					var g = raphaelTextWithBox(paper, meas_base_x, y_body_base, reharsal_group.name, param.reharsal_mark_font_size);
@@ -2892,27 +2892,27 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				x += hlw;
 			}
 		}
-		
+
 		header_rs_area_width = x - meas_base_x;
-		
+
 		if(header_body_area_width > header_rs_area_width)
 			x += (header_body_area_width - header_rs_area_width);
-		
+
 		// Margin between header and body
 		x += param.header_body_margin;
-		
+
 		m.header_width = x - meas_base_x;
-		
+
 		// Draw body
 		var body_base = x;
-		
+
 		// First, guess chord duration here.
 		// In current version, each chord in the measure is assumed to have the same duration.
 		// TODO : Improve based on number of spaces or duration indication mark.
 		var num_chord_in_a_measure = 0;
 		var all_has_length = true;
 		var sum_length = 0.0;
-		
+
 		var chord_and_rests = [];
 		for(var ei = 0; ei < elements.body.length; ++ei)
 		{
@@ -2924,9 +2924,9 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				chord_and_rests.push(e);
 			}
 		}
-		
+
 		var chord_name_str = null;
-		
+
 		for(var ei = 0; ei < elements.body.length; ++ei)
 		{
 			var e = elements.body[ei];
@@ -2936,20 +2936,20 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				chord_space = Math.floor(40*x_global_scale / sum_length*e.length);
 			else
 				chord_space = Math.floor(40*x_global_scale / num_chord_in_a_measure);
-			
+
 			if(e instanceof Chord){
 				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
 						param, draw, C7_width, chord_space, x_global_scale, m.body_scaling, theme);
 				if(e.exceptinal_comment !== null){
 					if(draw)
-						var g = raphaelText(paper, x, y_body_base, 
+						var g = raphaelText(paper, x, y_body_base,
 							e.exceptinal_comment.comment, 15, "lb");
 				}
 				if(e.lyric !== null){
 					if(draw){
 						var llist = e.lyric.lyric.split("/");
 						for(var li=0; li < llist.length; ++li){
-							var g = raphaelText(paper, x, y_ml_area_base + li*param.ml_row_height, 
+							var g = raphaelText(paper, x, y_ml_area_base + li*param.ml_row_height,
 								llist[li], 10, "lt");
 						}
 					}
@@ -2958,8 +2958,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				if(!isFinite(x)){
 					console.log("Illegal calculation of x is detected");
 				}
-				// If chord is continued from the previous chord with tie, or 
-				// more than 1 adjacent valid chords are the same, 
+				// If chord is continued from the previous chord with tie, or
+				// more than 1 adjacent valid chords are the same,
 				// the chord(s) except the first one are not drawn. This is not applied for invalid chord.
 				if(g_prev_chord_has_tie || (e.is_valid_chord && (chord_name_str == e.chord_name_str))){
 					cr.group.remove(); // Not draw chord symbol
@@ -2989,23 +2989,23 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				x += C7_width * x_global_scale * m.body_scaling;
 				x += (chord_space*m.body_scaling);
 				e.renderprop.x = x;
-				if(!draw) rg.remove();				
-			
+				if(!draw) rg.remove();
+
 			}else{
 				throw "ERROR";
 			}
 		}
-		
+
 		if(elements.body.length == 0)
 		{
 			// If no elements in body area, minimum width is reservied assuming 1 CM7 chord is located.
 			x += C7_width * x_global_scale * m.body_scaling;
 			x += (40*x_global_scale*m.body_scaling);
 		}
-		
+
 		//console.log({x:x, body_base:body_base, scaling:m.body_scaling});
 		m.body_width = x - body_base;
-		
+
 		// Draw footer
 		var footer_base = x;
 		for(var ei = 0; ei < elements.footer.length; ++ei)
@@ -3015,7 +3015,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			// End boundary should be drawn only when this measure is the last
 			// measure in current row.
 			var lr = rs_area_detected ? 'l' : 'r';
-			
+
 			var e = elements.footer[ei];
 			if(e instanceof MeasureBoundary)
 			{
@@ -3032,13 +3032,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				if(rs_area_detected) x += text.getBBox().width;
 			}else if(e instanceof ToCoda){
 				if(rs_area_detected){
-					var text = raphaelText(paper, x, y_rs_area_base, "To", 15, "lb").attr(param.repeat_mark_font);	
+					var text = raphaelText(paper, x, y_rs_area_base, "To", 15, "lb").attr(param.repeat_mark_font);
 					x += (text.getBBox().width + 5);
 					var coda = draw_coda(paper, x, y_rs_area_base, "lb", e);
 					x += coda.getBBox().width;
 				}else{
 					var coda = draw_coda(paper, x, y_rs_area_base, "rb", e);
-					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_rs_area_base, "To", 15, "rb").attr(param.repeat_mark_font);		
+					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_rs_area_base, "To", 15, "rb").attr(param.repeat_mark_font);
 				}
 			}else if(e instanceof Fine){
 				text = raphaelText(paper, x, y_rs_area_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
@@ -3047,11 +3047,11 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				throw "ERROR";
 			}
 		}
-		
+
 		m.footer_width = x - footer_base;
 		meas_end_x = x;
 		last_meas_end_x = meas_end_x;
-		
+
 		// Draw Upper and Lower Signs
 		for(var ei = 0; ei < elements.measure_wide.length; ++ei)
 		{
@@ -3059,13 +3059,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			if(e instanceof LoopIndicator){
 				var oy = 10;
 				var ly = y_body_base - 2 - oy;
-				var sx = meas_start_x; 
+				var sx = meas_start_x;
 				var fx = meas_end_x;
 				if(draw) paper.path(svgLine(sx, ly, sx, ly + oy)).attr({"stroke-width":"1"});
 				if(draw) paper.path(svgLine(sx, ly, fx, ly)).attr({"stroke-width":"1"});
 				var s = e.indicators.join(",");
 				if(draw) raphaelText(paper, sx + 2, ly, s, 10, "lt");
-			}else if(e instanceof LongRestIndicator){	
+			}else if(e instanceof LongRestIndicator){
 				var sx = meas_start_x + m.header_width - param.header_body_margin; // More beautiful for long rest if header body margin is omitted
 				var fx = meas_end_x - m.footer_width;
 				var rh = param.row_height;
@@ -3073,9 +3073,9 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				var min_lrmargin = 5;
 				var max_lrmargin = 20;
 				var vlmargin = 0.2;
-				
+
 				lrmargin = Math.max( min_lrmargin, Math.min(max_lrmargin, (sx+fx) * r_lrmargin) );
-				
+
 				var lx = sx + lrmargin;
 				var rx = fx - lrmargin;
 				if(draw) paper.path(svgLine(lx, y_body_base + param.row_height/2,
@@ -3089,27 +3089,27 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				throw "Unkown measure wide instance detected";
 			}
 		}
-		
+
 		// Draw Rythm Slashes
 		if(rs_area_detected){
 			var rdy = 15; // Magic Number to place the slash at the center of 5 lines
 			var g = render_rhythm_slash(
 					chord_and_rests, paper,
 					y_rs_area_base + rdy,
-					meas_start_x, meas_end_x, 
+					meas_start_x, meas_end_x,
 					draw, 0, m.body_scaling, all_has_length);
-			
+
 			if(!g){
 				render_empty_rythm_slash(paper, body_base, y_rs_area_base + rdy,
 						m.body_width, 4, m.body_scaling);
 			}
 		}
-		
+
 		m.renderprop.meas_height = measure_height;
 		measure_heights.push(measure_height);
-		
+
 	} // elements loop
-	
+
 	if(rs_area_detected){
 		for(var i = 0; i < 5; ++i){
 			var intv = param.rs_area_height / (5-1);
@@ -3117,11 +3117,11 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			if(draw) paper.path( svgLine([[first_meas_start_x, y_rs_area_base + i*intv + dy],[last_meas_end_x, y_rs_area_base + i*intv + dy]]) ).attr({'stroke-width':'1px'});
 		}
 	}
-	
+
 	// max.apply with 0 length array will generate -inf value, then check if measure_heights has at least one element
 	if( measure_heights.length > 0 )
 		y_base += Math.max.apply(null, measure_heights);
-	
+
 	return {y_base:y_base};
 }
 
@@ -3138,17 +3138,17 @@ function getGlobalMacros(track)
 	if( "ARTIST" in track.macros ){
 		global_macros.artist = track.macros["ARTIST"];
 	}
-	
+
 	global_macros.sub_title = "";
 	if( "SUB_TITLE" in track.macros ){
 		global_macros.sub_title = track.macros["SUB_TITLE"];
 	}
-	
+
 	global_macros.x_global_scale = 1.0;
 	if( "XSCALE" in track.macros ){
 		global_macros.x_global_scale = parseFloat(track.macros["XSCALE"]);
 	}
-	
+
 	global_macros.transpose = 0;
 	if( "TRANSPOSE" in track.macros)
 	{
@@ -3156,13 +3156,13 @@ function getGlobalMacros(track)
 		if(!isNaN(t))
 			global_macros.transpose = t;
 	}
-	
+
 	global_macros.half_type = "GUESS";
 	if( "HALF_TYPE" in track.macros)
 	{
 		global_macros.half_type = track.macros["HALF_TYPE"]; // "SHARP","FLAT","GUESS"
 	}
-	
+
 	global_macros.staff = "AUTO";
 	if( "STAFF" in track.macros)
 	{
@@ -3174,53 +3174,53 @@ function getGlobalMacros(track)
 	{
 		global_macros.row_margin = parseInt(track.macros["ROW_MARGIN"]);
 	}
-	
+
 	global_macros.theme = "Default";
 	if( "THEME" in track.macros)
 	{
 		global_macros.theme = track.macros["THEME"];
 	}
-	
+
 	global_macros.reharsal_mark_position = "Default";
 	if( "REHARSAL_MARK" in track.macros)
 	{
 		global_macros.reharsal_mark_position = track.macros["REHARSAL_MARK"];
-		
+
 		if(global_macros.reharsal_mark_position == "Inner" && global_macros.staff != "ON"){
 			alert("REHARSAL_MARK=\"Inner\" needs to be specified with STAFF=\"ON\"");
 		}
 	}
-	
+
 	return global_macros;
 }
 
-// Compare global macros and rehearsal group macros. 
+// Compare global macros and rehearsal group macros.
 // If rehearsal group macro is defined it is adopted.
 function getMacros(global_macros, rg)
 {
 	var macros_to_apply = $.extend(true, {}, global_macros); // Deep copy
-	
+
 	if( "XSCALE" in rg.macros ){
 		macros_to_apply.x_global_scale = parseFloat(rg.macros["XSCALE"]);
 	}
-	
+
 	if( "TRANSPOSE" in rg.macros)
 	{
 		var t = parseInt(rg.macros["TRANSPOSE"]);
 		if(!isNaN(t))
 			macros_to_apply.transpose = t;
 	}
-	
+
 	if( "HALF_TYPE" in rg.macros)
 	{
 		macros_to_apply.half_type = rg.macros["HALF_TYPE"]; // "SHARP","FLAT","GUESS"
 	}
-	
+
 	if( "STAFF" in rg.macros)
 	{
 		macros_to_apply.staff = rg.macros["STAFF"];
 	}
-	
+
 	return macros_to_apply;
 }
 
@@ -3252,9 +3252,9 @@ function Initialize()
 function render_impl(canvas, track, just_to_estimate_size, param, async_mode, progress_cb)
 {
 	var draw = !just_to_estimate_size;
-	
+
 	console.log("render_impl called with " + draw);
-	
+
 	var y_title_offset = param.y_title_offset;
 	var x_offset = param.x_offset;
 	var width = param.paper_width - x_offset * 2;
@@ -3262,35 +3262,35 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	if(draw){
 		paper = makeNewPaper(canvas, param);
 	}else{
-		// Dammy paper object 
+		// Dammy paper object
 		paper = makeDammyPaper();
 	}
-		
+
 	var y_base = param.y_first_page_offset;
-	
+
 	var songname = "";
 
 	var global_macros = getGlobalMacros(track);
 
 	// Title
-	if(draw) raphaelText(paper, x_offset + width/2, y_title_offset, global_macros.title, 24, "ct"); 
+	if(draw) raphaelText(paper, x_offset + width/2, y_title_offset, global_macros.title, 24, "ct");
 	songname = global_macros.title;
 
 	// Sub Title
 	if(draw && global_macros.sub_title != "")
-		raphaelText(paper, x_offset + width/2, y_title_offset + 28, global_macros.sub_title, 14, "ct"); 
+		raphaelText(paper, x_offset + width/2, y_title_offset + 28, global_macros.sub_title, 14, "ct");
 
 	// Artist
-	if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt"); 		
+	if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt");
 	songname += ("/"+global_macros.artist);
-	
+
 	// Apply for rendering parameter if specified by global macros
 	if (global_macros.row_margin !== null)
 		param.row_margin = global_macros.row_margin;
-	
+
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Making pagination");
-	
+
 	var pageslist = [];
 	if(draw){
 
@@ -3329,7 +3329,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 						block_id:bi,row_id_in_block:row_id_in_block});
 			}
 		}
-		
+
 		var sum_y = 0;
 		var page_cont = [];
 		for(var i = 0; i < y_stacks.length; ++i)
@@ -3345,7 +3345,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		}
 		if(page_cont.length > 0)
 			pageslist.push(page_cont);
-		
+
 		console.log("////////");
 		console.log(pageslist);
 	}else{
@@ -3364,40 +3364,40 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		}
 		pageslist.push(y_stacks);
 	}
-	
+
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Invoke async loop execution");
-	
+
 	/* If reharsal group is drawn left side of the measures, calculte the offset */
 	if(!draw){
 		track.pre_render_info["meas_left_offset"] = 0;
 	}
-	
+
 	if(async_mode){
 		Task.Foreach(pageslist, function(pageidx, len, page, ctx1){
-			
+
 			Task.Foreach(page, function(pei,yselen, yse, ctx2){
-				
+
 				if(progress_cb){
 					progress_cb((ctx2.draw ? "":"Pre-")+"Rendering block " + pei + " in page " + (pageidx+1) + " of " + songname);
 				}
-				
+
 				if(yse.type == 'titles'){
-					
+
 				}else if(yse.type == 'reharsal' && yse.macros.reharsal_mark_position != "Inner"){
 					var rg = yse.cont;
-					
+
 					if(ctx2.draw){
 						var g = raphaelTextWithBox(ctx2.paper, x_offset, ctx2.y_base, rg.name, ctx2.param.reharsal_mark_font_size);
 					}
-					
+
 					ctx2.y_base += ctx2.param.rm_area_height; // Reharsal mark area height
-					
+
 				}else if(yse.type == 'meas'){
 					var row_elements_list = yse.cont;
 					var r = render_measure_row(
 							x_offset + track.pre_render_info["meas_left_offset"],
-							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose, 
+							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose,
 							yse.macros.half_type, row_elements_list, yse.rg, yse.pm, yse.nm,
 							ctx2.y_base, ctx2.param, ctx2.draw,
 							yse.macros.staff, global_macros.theme,
@@ -3405,55 +3405,55 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							yse.macros.reharsal_mark_position=="Inner");
 					ctx2.y_base = r.y_base;
 				}
-				
+
 			}, ctx1, "renderpageelemloop");
-			
+
 			var lasttask = Task.enqueueFunctionCall(function(){
 				// Page number footer
 				footerstr = (songname + " - " + (pageidx+1) + " of " + (pageslist.length));
 				//alert(footerstr);
 				raphaelText(ctx1.paper, param.paper_width/2, param.paper_height - 60, footerstr, 12, "ct");
-				
+
 				// Make new page
 				if(ctx1.draw && pageidx != pageslist.length-1){
 					ctx1.paper = makeNewPaper(canvas, ctx1.param);
 					ctx1.y_base = ctx1.param.y_offset;
 				}}, [], "renderpageelemloop");
-			
+
 			return lasttask;
-			
+
 		},{param:param,draw:draw,paper:paper,y_base:y_base}, "renderpageloop");
-		
+
 		var task = Task.enqueueFunctionCall(function(){
 			if(!draw){
 				removeDammyPaper();
 			}
 		}, [], "renderpageloop");
-		
+
 		return task;
-		
+
 	}else{
-		
+
 		for(var pageidx = 0; pageidx < pageslist.length; ++pageidx){
-			
+
 			var yse = pageslist[pageidx];
 			for(var pei = 0; pei < yse.length; ++pei){ // Loop each y_stacks
 				if(yse[pei].type == 'titles'){
-					
+
 				}else if(yse[pei].type == 'reharsal' && yse[pei].macros.reharsal_mark_position != "Inner"){
 					var rg = yse[pei].cont;
-					
+
 					if(draw){
 						var g = raphaelTextWithBox(paper, x_offset, y_base, rg.name, param.reharsal_mark_font_size);
 					}
-					
+
 					y_base += param.rm_area_height; // Reharsal mark area height
 				}else if(yse[pei].type == 'meas'){
 					var row_elements_list = yse[pei].cont;
 					var r = render_measure_row(
 							x_offset + track.pre_render_info["meas_left_offset"],
 							paper, yse[pei].macros.x_global_scale, yse[pei].macros.transpose,
-							yse[pei].macros.half_type, row_elements_list, 
+							yse[pei].macros.half_type, row_elements_list,
 							yse[pei].rg, yse[pei].pm, yse[pei].nm,
 							y_base, param, draw, yse[pei].macros.staff, global_macros.theme,
 							(yse[pei].block_id==0 && yse[pei].row_id_in_block==0),
@@ -3465,33 +3465,33 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 			footerstr = (songname + " - " + (pageidx+1) + " of " + (pageslist.length));
 			//alert(footerstr);
 			raphaelText(paper, param.paper_width/2, param.paper_height - 60, footerstr, 12, "ct");
-			
+
 			if(draw && pageidx != pageslist.length-1){
 				paper = makeNewPaper(canvas, param);
 				y_base = param.y_offset;
 			}
 		} // reharsal group loop
-	
-		
+
+
 		if(!draw){
 			removeDammyPaper();
 		}
-	
+
 	} // end async switch
 }
 
 function draw_segno(paper, x, y, segno)
 {
-	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619'); 
+	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619');
 	var path3001 = rsr.path("m 7.45119,0.00462507 c -2.62006,-0.12965 -4.89531,2.48917003 -4.5203,5.06077003 0.30852,2.3265 2.16735,4.12974 4.20376,5.1011599 1.65879,0.86938 3.71404,0.71264 5.22694,1.90481 1.39044,1.02552 1.92776,3.15917 0.89399,4.61515 -0.59006,0.8633 -1.60565,1.57525 -2.69669,1.40546 -0.51026,-0.79781 -0.0548,-1.84761 -0.5841,-2.65244 -0.50017,-0.97685 -1.7314,-1.52668 -2.77051,-1.09339 -1.09273,0.36861 -1.55201,1.78786 -0.96315,2.76184 0.95747,1.95409 3.44952,2.65453 5.45383,2.15374 2.52866,-0.60348 4.08162,-3.66205 3.0424,-6.05383 -0.87324,-2.27646 -3.05164,-3.8349199 -5.33435,-4.4943599 -1.63211,-0.39445 -3.53265,-0.67749 -4.56541,-2.16526 -0.96216,-1.25884 -0.91035,-3.20529 0.26205,-4.31632 0.58015,-0.61405 1.43392,-1.05559 2.29618,-0.91468 0.51027,0.79781 0.0548,1.84762 0.5841,2.65244 0.50017,0.97686 1.7314,1.52668 2.77051,1.09339 1.0378,-0.35178 1.53161,-1.67674 1.0195,-2.63799 C 11.07123,0.77410507 9.16303,-0.05833493 7.45119,0.00462507 z"); path3001.attr({id: 'path3001',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '50',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3001'); var path3807 = rsr.path("m 15.97079,8.1489251 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3807.attr({id: 'path3807',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3807'); var path3822 = rsr.path("m 3.38842,11.049785 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3822.attr({id: 'path3822',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3822'); var path3803 = rsr.path("M 15.69138,2.8164551 C 10.46092,7.2657851 5.23046,11.715125 0,16.164455 c 0.68845,-0.002 1.37691,-0.003 2.06536,-0.005 5.21598,-4.44988 10.43195,-8.8997599 15.64793,-13.3496399 -0.67397,0.002 -1.34794,0.004 -2.02191,0.007 z"); path3803.attr({id: 'path3803',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '49.9',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3803'); var rsrGroups = [];
 	// Need to note raphael set is not g tag in svg element. Then need to make 2 groups here to apply different tranform.
 	var group1 = rsr.set();
-	
+
 	group1.push(path3001, path3807, path3822, path3803);
 	group1.transform("t"+x +","+(y-1)+" s0.9");
 
 	var h = group1.getBBox().height;
-	
+
 	var group2 = rsr.set();
 	var group2_valid = false;
 	if(segno.number !== null){
@@ -3515,13 +3515,13 @@ function draw_segno(paper, x, y, segno)
 function draw_coda(paper, x, y, align, coda)
 {
 	// aligh=(l|c|r)(b|m|t)
-	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619'); 
+	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619');
 	var path3878 = rsr.path("m 7.36,1.9518304 c -3.1472,0 -5.51238,3.23098 -5.51238,6.97709 0,3.7461196 2.36518,6.9770896 5.51238,6.9770896 3.1472,0 5.51238,-3.23097 5.51238,-6.9770896 0,-3.74611 -2.36518,-6.97709 -5.51238,-6.97709 z m 0,0.84817 c 1.97338,0 3.75892,3.18901 3.75892,6.12892 0,2.9399196 -1.78554,6.1289296 -3.75892,6.1289296 -1.97338,0 -3.75892,-3.18901 -3.75892,-6.1289296 0,-2.93991 1.78554,-6.12892 3.75892,-6.12892 z"); path3878.attr({id: 'path3878',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '72.4',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3878'); var path4413 = rsr.path("m 7.2,3.814697e-7 -3.6,0 0,0.7999999985303 3.2,0.40000002 0,7.6 1.2,0 0,-7.6 3.2,-0.40000002 0,-0.7999999985303 z"); path4413.attr({id: 'path4413',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4413'); var path4415 = rsr.path("m 7.6,17.6 3.6,0 0,-0.8 -3.2,-0.4 0,-7.5999996 -1.2,0 0,7.5999996 -3.2,0.4 0,0.8 z"); path4415.attr({id: 'path4415',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4415'); var path4417 = rsr.path("m 14.8,8.8000004 0,-3.6 -0.8,0 -0.4,3.2 -7.6,0 0,1.2 7.6,0 L 14,12.8 l 0.8,0 z"); path4417.attr({id: 'path4417',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4417'); var path4419 = rsr.path("M 0,9.2000004 0,12.8 l 0.8,0 0.4,-3.1999996 7.6,0 0,-1.2 -7.6,0 -0.4,-3.2 -0.8,0 z"); path4419.attr({id: 'path4419',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4419'); var rsrGroups = [];
 	var group = rsr.set();
 	group.push(path3878, path4413, path4415, path4417, path4419);
 	if(coda.number !== null)
 		group.push( raphaelText(paper, group.getBBox().width, group.getBBox().height + 4, coda.number, 20, "lb"));
-	
+
 	if(align !== undefined && align !== null){
 		//console.log(group.getBBox());
 		var xc = align[0]=='l'?0.0:(align[0]=='c'?0.5:1.0);

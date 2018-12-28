@@ -2820,8 +2820,12 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 	for(var ei = 0; ei < elems.length; ++ei){
 		var e = elems[ei];
 
-		if(! (e instanceof Chord))
-			continue; // Rests also get into here but not drawn in this function
+		// Rests also get into here but not drawn in this function.
+		// Only the length is taken for Rest.
+		if(e instanceof Rest){
+			if(all_has_length) balken.sum_len += e.length;
+			continue;
+		}
 
 		var x = e.renderprop.x;
 		var barlen = 15;

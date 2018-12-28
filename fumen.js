@@ -569,6 +569,15 @@ function parseChordMids(s)
 	return [holder, objholder];
 };
 
+function getNoteProfile(note_str)
+{
+	var IDX={'C':0,'D':2,'E':4,'F':5,'G':7,'A':9,'B':11};
+	var m = note_str.match(/([A-G])(#|b)?(\d+)/);
+	if(!m) return null;
+	var code = parseInt(m[3])*12 + IDX[m[1]] + (m[2]=='#'?1:-1) - 36 + 0x3C; // C3 bocomes 0x3C
+	return {code:code, note:[m[1],m[2],m[3]]};
+}
+
 function parseChordNotes(str)
 {
 	str = str.substr(1); // first (
@@ -584,10 +593,11 @@ function parseChordNotes(str)
 		var notes_str = tmp.split(",");
 		var nr = [];
 		for(var nsi=0; nsi < notes_str.length; ++nsi){
-			var m = notes_str[nsi].match(/([A-G])(#|b)?(\d+)/);
-			if(!m)
+			//var m = notes_str[nsi].match(/([A-G])(#|b)?(\d+)/);
+			var np = getNoteProfile(notes_str[nsi]);
+			if(!np)
 				throw "INVALID_TOKEN_DETECTED : invalid note notation"
-			nr.push([m[1],m[2],parseInt(m[3])]);
+			nr.push(np);
 		}
 
 		sng = sng.substr(sngi+1); // Skip )
@@ -605,7 +615,7 @@ function parseChordNotes(str)
 			tp /= 2;
 			length += tp;
 		}
-		return {s:sng.substr(m[0].length),ng:[nr,length_s,length,m[3]?true:false]};
+		return {s:sng.substr(m[0].length),ng:{nr:nr,length_s:length_s,length:length,has_tie:m[3]?true:false}};
 	};
 
 	var nglist = [];
@@ -2632,7 +2642,7 @@ function myLog2(integer)
 	return log2[integer];
 }
 
-function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, barlen, flagintv, balken_width)
+function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width)
 {
 	// Evaluate the flag direction(up or down) by the center of the y-axis position of all the notes/slashes
 	var center_y = 0.0;
@@ -2681,6 +2691,8 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 		var x = balken.groups[gbi].coord[0];
 		var ys = balken.groups[gbi].coord[1];
 		var d = balken.groups[gbi].onka;
+		var pos_on_5lines = balken.groups[gbi].pos_on_5lines;
+
 		if(balken.groups[gbi].type == "slash"){
 			var dots = balken.groups[gbi].dots;
 			if(d == '0' || d == '1'){
@@ -2705,7 +2717,22 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 						'\ue702', 7, "lc", "smart_music_symbol");
 				}
 				group.push(text);
+
+				// Draw additional lines
+				for(var p5i = pos_on_5lines[ci]; p5i <= -2; ++p5i){
+					if(p5i % 2 != 0) continue;
+					var a5y = _5lines_intv/2 * (3 - p5i); // rs_y_base corresponds to pos#3
+					var o = paper.path(svgLine(x-3, rs_y_base + a5y, x+12, rs_y_base + a5y)).attr({'stroke-width':'1px'});
+					group.push(o);
+				}
+				for(var p5i = pos_on_5lines[ci]; p5i >=10; --p5i){
+					if(p5i % 2 != 0) continue;
+					var a5y = _5lines_intv/2 * (3 - p5i); // rs_y_base corresponds to pos#3
+					var o = paper.path(svgLine(x-3, rs_y_base + a5y, x+12, rs_y_base + a5y)).attr({'stroke-width':'1px'});
+					group.push(o);
+				}
 			}
+
 			if(d == '0' || d == '1'){
 
 			}else{
@@ -2823,7 +2850,7 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 	}
 }
 
-function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
+function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x, meas_end_x,
 		draw, chord_space, body_scaling, all_has_length)
 {
 	// chords is list of chords for each chord object has .renderprop.x property
@@ -2854,6 +2881,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 		var rhythm_only = (e.length_s !== null && e.length_s !== undefined);
 		var notes_only = (e.nglist !== null && e.nglist !== undefined);
 		var group_y = [];
+		var pos_on_5lines = []; // For notes only. bottom line is 0, second bottom line is 2, ... top line is 8
 		var has_tie = false;
 
 		if(rhythm_only){
@@ -2865,24 +2893,27 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 			drawn = true;
 
 			group_y.push(rs_y_base);
+			pos_on_5lines.push(4); // Not used, but put center line for now.
 		}else if(notes_only){
 			// notes_only
 			drawn = true;
 			// Currently only one ng is assumed
 			for(var ngi=0; ngi < e.nglist.length; ++ngi){
 				var ng = e.nglist[ngi];
-				var nr = ng[0];
-				var d = ng[1].match(/[0-9]+/)[0];
-				var dots = ng[1].substr(d.length);
-				chord_length = Math.min(ng[2],chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
-				has_tie = ng[3];
+				var nr = ng.nr;
+				var d = ng.length_s.match(/[0-9]+/)[0];
+				var dots = ng.length_s.substr(d.length);
+				chord_length = Math.min(ng.length,chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
+				has_tie = ng.has_tie;
 
 				for(var nri=0; nri < nr.length; ++nri){
-					var dy = 3;
+					var dy = _5lines_intv/2; // 1/2 of interval of 5 lines
 					var NLIST={'C':0,'D':1,'E':2,'F':3,'G':4,'A':5,'B':6};
-					var yoffset = NLIST[nr[nri][0]]*dy  + dy*7*(nr[nri][2]-3);
-					var ypos = rs_y_base + dy*5 - yoffset;
+					var yoffset = NLIST[nr[nri].note[0]]*dy  + dy*7*(nr[nri].note[2]-3); // C3 offset = 0
+					var ypos = rs_y_base + dy*5 - yoffset; // rs_y_base corresopnds to the center of rs region and is corresponding to A3 when the notes are drawn with "top".
+					var pos_on_5line = Math.round(yoffset/(dy)) - 2;
 					group_y.push(ypos);
+					pos_on_5lines.push(pos_on_5line);
 				}
 			}
 		}else{
@@ -2894,19 +2925,21 @@ function render_rhythm_slash(elems, paper, rs_y_base, meas_start_x, meas_end_x,
 
 			// Flush current groups
 			if(chord_length >= WHOLE_NOTE_LENGTH/4 && balken.groups.length > 0){
-				draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
+				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
 				balken.groups = [];
 			}
 			balken.sum_len += chord_length;
 			balken.groups.push({
+				e : e,
 				type : rhythm_only ? "slash" : "notes",
 				dots : dots,
 				coord : [e.renderprop.x, group_y],
 				onka : d,
-				has_tie : has_tie
+				has_tie : has_tie,
+				pos_on_5lines : pos_on_5lines // for notes only
 			});
 			if(chord_length >= WHOLE_NOTE_LENGTH/4 || balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 || ei == elems.length-1){
-				draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
+				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
 				balken.groups = [];
 			}
 		}
@@ -2952,6 +2985,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	if(staff == "ON"){
 		rs_area_detected = true;
 	}
+	// interval of 5 lines
+	var _5lines_intv = param.rs_area_height / (5-1);
 
 	// Screening of y-axis areas
 	for(var ml = 0; ml < row_elements_list.length; ++ml){
@@ -3291,6 +3326,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			var g = render_rhythm_slash(
 					chord_and_rests, paper,
 					y_rs_area_base + rdy,
+					_5lines_intv,
 					meas_start_x, meas_end_x,
 					draw, 0, m.body_scaling, all_has_length);
 
@@ -3308,7 +3344,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	// Draw 5 lines
 	if(rs_area_detected){
 		for(var i = 0; i < 5; ++i){
-			var intv = param.rs_area_height / (5-1);
+			var intv = _5lines_intv;
 			var dy = 0;
 			if(draw) paper.path( svgLine([[first_meas_start_x, y_rs_area_base + i*intv + dy],[last_meas_end_x, y_rs_area_base + i*intv + dy]]) ).attr({'stroke-width':'1px'});
 		}

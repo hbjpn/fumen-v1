@@ -2745,15 +2745,29 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 
 		if(rs_prev_has_tie){
 			// Draw tie line
-			var dy = -10;
-			var sdx = 12;
-			var round = 8;
 			var pss = rs_prev_coord;
 			var psm = rs_prev_meas_coord;
 
 			// Check the consistency.
 			if(pss[1].length != ys.length){
 				throw "INVALID TIE NOTATION";
+			}
+
+			if(balken.groups[gbi].type == "slash"){
+				// slash only has down flag
+				var dy = -10;
+				var sdx = 12;
+				var round = 6;
+			}else{ // notes
+				if(upper_flag){
+					var dy =  3;
+					var sdx = 12;
+					var round = -6;
+				}else{
+					var dy = -3;
+					var sdx = 12;
+					var round = 6;
+				}
 			}
 
 			for(var ci=0; ci < ys.length; ++ci){

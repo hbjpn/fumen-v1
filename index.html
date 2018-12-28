@@ -36,7 +36,7 @@
 </style>
 <script type="text/javascript">
 var dpi = 96; // dot/inch
-var A4_width_mm = 210; 
+var A4_width_mm = 210;
 var A4_height_mm = 297;
 var mm_inch = 25.4; // mm/inch
 var paper_width = dpi * A4_width_mm / mm_inch;
@@ -68,11 +68,11 @@ function Stop()
 function Generate()
 {
 	Stop();
-	
+
 	var code = $("#score_code").val();
 	var async_mode = $('input[name="blocking"]:checked').val() == "non-blocking";
 	var showProgress = false;
-	
+
 	var p = new Fumen.Parser(function(msg){ console.log(msg); });
 	if(async_mode){
 		try{
@@ -88,7 +88,7 @@ function Generate()
 		}
 
 		task.then(function(r){
-			
+
 		});
 	}else{
 		console.log("Rendering ... ");
@@ -153,6 +153,9 @@ function Generate()
 
 [H]
 ||: (4/4) <S3> 'Vocal start' C:4  @`Hoge/Pofu/Peke` B:2. @`FugaFuga` | A C | [1.] Bm7-5:2 B7:2 :|| [2.] C:2 F:2 |A | B | C | D |
+
+[J]
+| C:((C3,E3,G3,B3):4) :((D3,F#3,A3):4) :((A3,C#3):8) :((B3,D3):8) Eb:((Eb4,Bb3):4~) | D:((Eb4,Bb3):2) r:8 r:16 E:((F3,D3):16~) | E:((F3,D3):2) |
 
 [Z]
 | C | Cm <Fine> | F | F7 <D.S.2> |

@@ -2673,15 +2673,15 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 	var intercept = (upper_flag ? min_y-barlen : max_y+barlen) - slope * (upper_flag ? x_at_min_y : x_at_max_y);
 
 	// if flag is upper, then the balken is shifted +deltax, then intercept is updated.
-	var deltax = upper_flag ? 6 : 0;
+	var deltax = upper_flag ? 7 : 0;
 	intercept = intercept - slope * deltax;
 
 	// Draw slash or notes
 	for(var gbi=0; gbi < balken.groups.length;++gbi){
 		var x = balken.groups[gbi].coord[0];
 		var ys = balken.groups[gbi].coord[1];
+		var d = balken.groups[gbi].onka;
 		if(balken.groups[gbi].type == "slash"){
-			var d = balken.groups[gbi].onka;
 			var dots = balken.groups[gbi].dots;
 			if(d == '0' || d == '1'){
 				raphaelSlash(paper, group, x, rs_y_base, d, dots.length);
@@ -2693,13 +2693,26 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 		}else if(balken.groups[gbi].type == "notes"){
 			for(var ci=0; ci < ys.length; ++ci){
 				var y = ys[ci];
-				text = raphaelText(paper, x, y,
-					'\ue702', 7, "lc", "smart_music_symbol");
+				if(d == '0'){
+				}else if(d == '1'){
+					text = raphaelText(paper, x, y,
+						'\ue700', 7, "lc", "smart_music_symbol");
+				}else if(d == '2'){
+					text = raphaelText(paper, x, y,
+						'\ue701', 7, "lc", "smart_music_symbol");
+				}else{
+					text = raphaelText(paper, x, y,
+						'\ue702', 7, "lc", "smart_music_symbol");
+				}
 				group.push(text);
 			}
-			var y0 = upper_flag ? Math.max.apply(null,ys) : Math.min.apply(null,ys);
-			var o = paper.path(svgLine(x+deltax, y0, x+deltax, slope*(x+deltax)+intercept)).attr({'stroke-width':'1px'});
-			group.push(o);
+			if(d == '0' || d == '1'){
+
+			}else{
+				var y0 = upper_flag ? Math.max.apply(null,ys) : Math.min.apply(null,ys);
+				var o = paper.path(svgLine(x+deltax, y0, x+deltax, slope*(x+deltax)+intercept)).attr({'stroke-width':'1px'});
+				group.push(o);
+			}
 		}
 
 		if(rs_prev_has_tie){

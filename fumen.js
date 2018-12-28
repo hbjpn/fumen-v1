@@ -2673,7 +2673,7 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 	var intercept = (upper_flag ? min_y-barlen : max_y+barlen) - slope * (upper_flag ? x_at_min_y : x_at_max_y);
 
 	// if flag is upper, then the balken is shifted +deltax, then intercept is updated.
-	var deltax = upper_flag ? 7 : 0;
+	var deltax = upper_flag ? 8 : 0;
 	intercept = intercept - slope * deltax;
 
 	// Draw slash or notes
@@ -2710,6 +2710,7 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 
 			}else{
 				var y0 = upper_flag ? Math.max.apply(null,ys) : Math.min.apply(null,ys);
+				// Draw the basic vertical line. For the note with hat, some additional length will be added when to draw flags.
 				var o = paper.path(svgLine(x+deltax, y0, x+deltax, slope*(x+deltax)+intercept)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
@@ -2807,12 +2808,17 @@ function draw_balken(paper, group, balken, rs_y_base, meas_start_x, meas_end_x, 
 		}
 	}else if(balken.groups.length == 1){
 		// Normal drawing of flags
-		var ps = balken.groups[0].coord;
+		var x = balken.groups[0].coord[0];
 		var d = balken.groups[0].onka;
 		var numflag = myLog2(parseInt(d)) - 2;
 		for(var fi = 0; fi < numflag; ++fi){
-			o = paper.path("M"+(ps[0]+10)+","+(rs_y_base+barlen-10-fi*flagintv) + "L"+(ps[0])+","+(rs_y_base+barlen-fi*flagintv)).attr({'stroke-width':'1px'});
-			group.push(o);
+			//o = paper.path("M"+(ps[0]+10)+","+(rs_y_base+barlen-10-fi*flagintv) + "L"+(ps[0])+","+(rs_y_base+barlen-fi*flagintv)).attr({'stroke-width':'1px'});
+			var text = raphaelText(paper, x+deltax, slope*(x+deltax)+intercept+(upper_flag ? 1+fi*6 : -1-fi*6),
+				(upper_flag ? '\ue710' : '\ue711'), 16, "lc", "smart_music_symbol");
+			group.push(text);
+			// Additional vertical line
+			var line  = paper.path(svgLine(x+deltax, slope*(x+deltax)+intercept, x+deltax, slope*(x+deltax)+intercept + (upper_flag ? - 8 : 8))).attr({'stroke-width':'1px'});
+			group.push(line);
 		}
 	}
 }
@@ -3436,6 +3442,7 @@ function Initialize()
 	for(var i=0; i < FONT_FAMILIES.length; ++i){
 		var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt",FONT_FAMILIES[i]);
 	}
+	raphaelText(paper, 100, 120, "b#\ue700\ue701\ue702\ue710\ue711\ue901", 16, "lt",'smart_music_symbol');
 	removeDammyPaper();
 }
 

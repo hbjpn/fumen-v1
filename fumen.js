@@ -473,16 +473,11 @@ function Measure()
 	this.renderprop = {}; // Rendering information storage
 }
 
-function Rest(length, huten)
+function Rest(length_s)
 {
-	var tp = WHOLE_NOTE_LENGTH / length;
-	this.length_s = ""+length+(huten?huten:"");
-	this.length = WHOLE_NOTE_LENGTH / length;
-	var hs = huten ? huten : "";
-	for(var i = 0; i < hs.length; ++i){
-		tp /= 2;
-		this.length += tp;
-	}
+	this.length_s = length_s;
+	var li = parseLengthIndicator(length_s);
+	this.length = li.length;
 	this.renderprop = {};
 }
 
@@ -578,6 +573,28 @@ function getNoteProfile(note_str)
 	return {code:code, note:[m[1],m[2],m[3]]};
 }
 
+// Parse strings of number + dot
+function parseLengthIndicator(length_s)
+{
+	var mm = length_s.match(/(1|2|4|8|16|32|64)((3|5|6|7)|(\.+))?/);
+	var base = parseInt(mm[1]);
+	var length = 0;
+	if(mm[3]){
+		// Renpu
+		var renpu = parseInt(mm[3]);
+		length = WHOLE_NOTE_LENGTH / (base/2) / renpu;
+	}else{
+		length = WHOLE_NOTE_LENGTH / base;
+		var tp = length;
+		var numdot = mm[4] ? mm[4].length : 0;
+		for(var j = 0; j < numdot; ++j){
+			tp /= 2;
+			length += tp;
+		}
+	}
+	return {length:length,base:base,renpu:renpu,numdot:numdot};
+}
+
 function parseChordNotes(str)
 {
 	str = str.substr(1); // first (
@@ -607,15 +624,10 @@ function parseChordNotes(str)
 		if(!m[0])
 			throw "INVALID_TOKEN_DETECTED";
 
-		var ps = m[2]?m[2]:"";
 		var length_s = m[1]+(m[2]?m[2]:""); // "number + .";
-		var length = WHOLE_NOTE_LENGTH / parseInt(m[1]);
-		var tp =  WHOLE_NOTE_LENGTH / parseInt(m[1]);
-		for(var j = 0; j < ps.length; ++j){
-			tp /= 2;
-			length += tp;
-		}
-		return {s:sng.substr(m[0].length),ng:{nr:nr,length_s:length_s,length:length,has_tie:m[3]?true:false}};
+		var li = parseLengthIndicator(length_s);
+
+		return {s:sng.substr(m[0].length),ng:{nr:nr,length_s:length_s,length:li.length,has_tie:m[3]?true:false}};
 	};
 
 	var nglist = [];
@@ -671,16 +683,12 @@ function Chord(chord_str)
 			}
 			this.is_valid_chord = (ret !== null);
 		}
-		if(m[8]){
+		if(m[9]){
+
 			if(m[11]){
-				var ps = m[12]?m[12]:"";
-				this.length_s = m[11]+(m[12]?m[12]:""); // "number + .";
-				this.length = WHOLE_NOTE_LENGTH / parseInt(m[11]);
-				var tp =  WHOLE_NOTE_LENGTH / parseInt(m[11]);
-				for(var j = 0; j < ps.length; ++j){
-					tp /= 2;
-					this.length += tp;
-				}
+				var li = parseLengthIndicator(m[9]);
+				this.length_s = m[9];
+				this.length = li.length;
 			}else if(m[13]){
 				// Notes
 				this.nglist = parseChordNotes(m[13]);
@@ -1248,12 +1256,10 @@ Parser.prototype.parseChordSymbol = function(trig_token, trig_token_type, s)
 Parser.prototype.parseRest = function(trig_token, trig_token_type, s)
 {
 	// Analyze Rest symbol
-	var r = /^r\:(1|2|4|8|16|32|64)(\.*)$/;
+	var r = /^r\:((\d+)(\.*))$/;
 	var m = trig_token.match(r);
 	var rest = null;
-	if(m){
-		rest = new Rest(parseInt(m[1]),m[2]);
-	}
+	if(m) rest = new Rest(m[1]);
 	return {s:s, rest:rest};
 };
 

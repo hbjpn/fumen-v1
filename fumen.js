@@ -576,25 +576,25 @@ function getNoteProfile(note_str)
 // Parse strings of number + dot
 function parseLengthIndicator(length_s)
 {
-	var mm = length_s.match(/(1|2|4|8|16|32|64)((3|5|6|7)|(\.+))?(\~)?/);
+	var mm = length_s.match(/(\d+)((_(3|5|6|7))|(\.+))?(\~)?/);
 	if(!mm) return null;
 
 	var base = parseInt(mm[1]);
 	var length = 0;
 	if(mm[3]){
 		// Renpu
-		var renpu = parseInt(mm[3]);
+		var renpu = parseInt(mm[4]);
 		length = WHOLE_NOTE_LENGTH / (base/2) / renpu;
 	}else{
 		length = WHOLE_NOTE_LENGTH / base;
 		var tp = length;
-		var numdot = mm[4] ? mm[4].length : 0;
+		var numdot = mm[5] ? mm[5].length : 0;
 		for(var j = 0; j < numdot; ++j){
 			tp /= 2;
 			length += tp;
 		}
 	}
-	return {length:length,base:base,renpu:renpu,numdot:numdot,has_tie:mm[5]?true:false};
+	return {length:length,base:base,renpu:renpu,numdot:numdot,has_tie:mm[6]?true:false};
 }
 
 function parseChordNotes(str)
@@ -620,16 +620,15 @@ function parseChordNotes(str)
 		}
 
 		sng = sng.substr(sngi+1); // Skip )
-		var r = /\:(\d+)(\.*)(\~)?/;
+		var r = /\:(([\d_]+)(\.*)(\~)?)/;
 		var m = sng.match(r);
 
 		if(!m[0])
 			throw "INVALID_TOKEN_DETECTED";
 
-		var length_s = m[1]+(m[2]?m[2]:""); // "number + .";
-		var li = parseLengthIndicator(m[0]);
+		var li = parseLengthIndicator(m[1]);
 
-		return {s:sng.substr(m[0].length),ng:{nr:nr,lengthIndicator:li,length_s:length_s,length:li.length,has_tie:m[3]?true:false}};
+		return {s:sng.substr(m[0].length),ng:{nr:nr,lengthIndicator:li}};
 	};
 
 	var nglist = [];
@@ -654,9 +653,10 @@ function Chord(chord_str)
 
 	this.is_valid_chord = true;
 
-	this.length = WHOLE_NOTE_LENGTH;
+	/*this.length = WHOLE_NOTE_LENGTH;
 	this.length_s = null;
 	this.tie = false;
+	*/
 
 	this.renderprop = {};
 
@@ -668,7 +668,7 @@ function Chord(chord_str)
 	this.nglist = null;
 
 	// Analyze Chord symbol
-	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(\/(A|B|C|D|E|F|G)(#|b)?)?)(:(((\d+)(\.*)(\~)?)|(\(.*\))))?/;
+	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(\/(A|B|C|D|E|F|G)(#|b)?)?)(:((([\d_]+)(\.*)(\~)?)|(\(.*\))))?/;
 	var m = chord_str.match(r);
 	//console.log(m);
 	// [0] is entire matched string
@@ -677,8 +677,8 @@ function Chord(chord_str)
 		this.note_base = m[3];
 		this.sharp_flat = m[4];
 		this.mid_str = m[5];
-		this.base_note_base = m[6];
-		this.base_sharp_flat = m[7];
+		this.base_note_base = m[7];
+		this.base_sharp_flat = m[8];
 
 		this.mid_elems = null;
 		if(this.mid_str !== undefined){
@@ -693,10 +693,10 @@ function Chord(chord_str)
 
 			if(m[11]){
 				var li = parseLengthIndicator(m[11]);
-				this.length_s = m[11];
-				this.length = li.length;
+				//this.length_s = m[11];
+				//this.length = li.length;
 				this.lengthIndicator = li;
-				this.tie = li.has_tie;
+				//this.tie = li.has_tie;
 			}else if(m[15]){
 				// Notes
 				this.nglist = parseChordNotes(m[15]);
@@ -1264,7 +1264,7 @@ Parser.prototype.parseChordSymbol = function(trig_token, trig_token_type, s)
 Parser.prototype.parseRest = function(trig_token, trig_token_type, s)
 {
 	// Analyze Rest symbol
-	var r = /^r\:((\d+)(\.*))$/;
+	var r = /^r\:(([\d_]+)(\.*))$/;
 	var m = trig_token.match(r);
 	var rest = null;
 	if(m) rest = new Rest(m[1]);
@@ -2708,11 +2708,11 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		var pos_on_5lines = balken.groups[gbi].pos_on_5lines;
 
 		if(balken.groups[gbi].type == "slash"){
-			var dots = balken.groups[gbi].dots;
+			var numdot = balken.groups[gbi].numdot;
 			if(d == '0' || d == '1'){
-				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, dots.length);
+				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, numdot);
 			}else{
-				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, dots.length);
+				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, numdot);
 				var o = paper.path("M"+x+","+(rs_y_base + _5lines_intv*2.5) + "L"+x+","+((rs_y_base + _5lines_intv*2.5)+barlen)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
@@ -2897,7 +2897,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 		// Rests also get into here but not drawn in this function.
 		// Only the length is taken for Rest.
 		if(e instanceof Rest){
-			if(all_has_length) balken.sum_len += e.length;
+			if(all_has_length) balken.sum_len += e.lengthIndicator.length;
 			continue;
 		}
 
@@ -2906,17 +2906,17 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 		var flagintv = 5;
 		var chord_length = 10000000;
 
-		var rhythm_only = (e.length_s !== null && e.length_s !== undefined);
-		var notes_only = (e.nglist !== null && e.nglist !== undefined);
+		var rhythm_only = e.lengthIndicator !== null; //(e.length_s !== null && e.length_s !== undefined);
+		var notes_only = e.nglist !== null; //(e.nglist !== null && e.nglist !== undefined);
 		var group_y = [];
 		var pos_on_5lines = []; // For notes only. bottom line is 0, second bottom line is 2, ... top line is 8
 		var has_tie = false;
 
 		if(rhythm_only){
-			chord_length = e.length;
-			var d = e.length_s.match(/[0-9]+/)[0];
-			var dots = e.length_s.substr(d.length);
-			has_tie = e.tie;
+			chord_length = e.lengthIndicator.length;
+			var d = e.lengthIndicator.base; //e.length_s.match(/[0-9]+/)[0];
+			var numdot = e.lengthIndicator.numdot; // = e.length_s.substr(d.length);
+			has_tie = e.lengthIndicator.has_tie; //e.tie;
 
 			drawn = true;
 
@@ -2929,10 +2929,10 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 			for(var ngi=0; ngi < e.nglist.length; ++ngi){
 				var ng = e.nglist[ngi];
 				var nr = ng.nr;
-				var d = ng.length_s.match(/[0-9]+/)[0];
-				var dots = ng.length_s.substr(d.length);
-				chord_length = Math.min(ng.length,chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
-				has_tie = ng.has_tie;
+				var d = ng.lengthIndicator.base; //ng.length_s.match(/[0-9]+/)[0];
+				var numdot = ng.lengthIndicator.numdot; //ng.length_s.substr(d.length);
+				chord_length = Math.min(ng.lengthIndicator.length,chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
+				has_tie = ng.lengthIndicator.has_tie; //ng.has_tie;
 
 				for(var nri=0; nri < nr.length; ++nri){
 					var dy = _5lines_intv/2; // 1/2 of interval of 5 lines
@@ -2960,7 +2960,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 			balken.groups.push({
 				e : e,
 				type : rhythm_only ? "slash" : "notes",
-				dots : dots,
+				numdot : numdot,
 				coord : [e.renderprop.x, group_y],
 				onka : d,
 				has_tie : has_tie,
@@ -3027,7 +3027,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			if(e instanceof Coda || e instanceof Segno || e instanceof Comment || e instanceof LoopIndicator || e instanceof ToCoda){
 				mu_area_detected = true;
 			}else if(e instanceof Chord){
-				rs_area_detected |= (e.length_s !== null);
+				rs_area_detected |= (e.lengthIndicator !== null);
 				rs_area_detected |= (e.nglist != null);
 			}else if( e instanceof Lyric){
 				ml_area_detected = true;
@@ -3183,8 +3183,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			var e = elements.body[ei];
 			if(e instanceof Chord || e instanceof Rest){
 				++num_chord_in_a_measure;
-				all_has_length &= (e.length !== null);
-				if(all_has_length) sum_length += e.length;
+				all_has_length &= (e.lengthIndicator !== null || e.nglist !== null);
+				if(all_has_length){
+					if(e.lengthIndicator)
+						sum_length += e.lengthIndicator.length;
+					else if(e.nglist)
+						sum_length += e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
+				}
 				chord_and_rests.push(e);
 			}
 		}
@@ -3196,9 +3201,14 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			var e = elements.body[ei];
 
 			var chord_space = 0;
-			if(all_has_length)
-				chord_space = Math.floor(40*x_global_scale / sum_length*e.length);
-			else
+			if(all_has_length){
+				var this_chord_len = 0;
+				if(e.lengthIndicator)
+					this_chord_len = e.lengthIndicator.length;
+				else if(e.nglist)
+					this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
+				chord_space = Math.floor(40*x_global_scale / sum_length*this_chord_len);
+			}else
 				chord_space = Math.floor(40*x_global_scale / num_chord_in_a_measure);
 
 			if(e instanceof Chord){
@@ -3228,16 +3238,16 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				if(g_prev_chord_has_tie || (e.is_valid_chord && (chord_name_str == e.chord_name_str))){
 					cr.group.remove(); // Not draw chord symbol
 				}
-				g_prev_chord_has_tie = e.tie;
+				g_prev_chord_has_tie = ( e.lengthIndicator ? e.lengthIndicator.has_tie : false );
 				chord_name_str = e.chord_name_str;
 			}else if(e instanceof Rest){
 				var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
 				var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14};
 				var dot_xoffsets = {1:16, 2:16, 4:10, 8:12, 16:14, 32:16, 64:18};
 				//var rd = parseInt(e.length_s);
-				var rrm = e.length_s.match(/([0-9]+)(\.*)/);
-				var rd = parseInt(rrm[1]);
-				var numdot = rrm[2].length;
+				//var rrm = e.length_s.match(/([0-9]+)(\.*)/);
+				var rd = e.lengthIndicator.base; //parseInt(rrm[1]);
+				var numdot = e.lengthIndicator.numdot; //rm[2].length;
 				var rg = paper.set();
 				var oy = yoffsets[rd];
 				var fs = 14;

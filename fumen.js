@@ -2859,6 +2859,13 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 						pse[0]+deltax,slope*(pse[0]+deltax)+intercept+(upper_flag?+1:-1)*fi*flagintv)).attr({'stroke-width':balken_width});
 					group.push(o);
 				}
+				if(same_sds[0].renpu){
+					var ro = 12;
+					var center_x = ((pss[0]+deltax) + (pse[0]+deltax))/2.0;
+					var text = raphaelText(paper, center_x, slope*center_x+intercept+(upper_flag ? -ro : ro),
+						same_sds[0].renpu+"", 12, "cc", "realbook_music_symbol");
+					group.push(text);
+				}
 			}
 		}
 	}else if(balken.groups.length == 1){
@@ -2964,7 +2971,8 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 				coord : [e.renderprop.x, group_y],
 				onka : d,
 				has_tie : has_tie,
-				pos_on_5lines : pos_on_5lines // for notes only
+				pos_on_5lines : pos_on_5lines, // for notes only
+				renpu : (e.lengthIndicator ? e.lengthIndicator.renpu : e.nglist[0].lengthIndicator.renpu)
 			});
 			if(chord_length >= WHOLE_NOTE_LENGTH/4 || balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 || ei == elems.length-1){
 				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);

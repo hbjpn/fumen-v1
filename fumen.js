@@ -2995,6 +2995,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	var ml_area_detected = false; // Measure Lower Area ( Blow the chord & rhythm slash area)
 	var lyric_rows = 0;
 
+	var rest_or_long_rests_detected = false;
+
 	//var draw_5line = false;
 	if(staff == "ON"){
 		rs_area_detected = true;
@@ -3016,6 +3018,10 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			}else if( e instanceof Lyric){
 				ml_area_detected = true;
 				lyric_rows = Math.max(e.lyric.split("/").length, lyric_rows);
+			}
+
+			if( e instanceof Rest || e instanceof LongRestIndicator ){
+				rest_or_long_rests_detected = true;
 			}
 		}
 	}
@@ -3330,13 +3336,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 				var lx = sx + lrmargin;
 				var rx = fx - lrmargin;
-				if(draw) paper.path(svgLine(lx, y_body_base + param.row_height/2,
-						rx, y_body_base + param.row_height/2)).attr({"stroke-width":"7"});
-				if(draw) paper.path(svgLine(lx, y_body_base + rh * vlmargin,
-						lx, y_body_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
-				if(draw) paper.path(svgLine(rx, y_body_base + rh * vlmargin,
-						rx, y_body_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
-				if(draw) raphaelText(paper, (sx+fx)/2, y_body_base, e.longrestlen, 14, "cm","realbook_music_symbol");
+				if(draw) paper.path(svgLine(lx, y_rs_area_base + param.row_height/2,
+						rx, y_rs_area_base + param.row_height/2)).attr({"stroke-width":"7"});
+				if(draw) paper.path(svgLine(lx, y_rs_area_base + rh * vlmargin,
+						lx, y_rs_area_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
+				if(draw) paper.path(svgLine(rx, y_rs_area_base + rh * vlmargin,
+						rx, y_rs_area_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
+				if(draw) raphaelText(paper, (sx+fx)/2, y_rs_area_base, e.longrestlen, 14, "cm","realbook_music_symbol");
 			}else{
 				throw "Unkown measure wide instance detected";
 			}
@@ -3352,7 +3358,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 					meas_start_x, meas_end_x,
 					draw, 0, m.body_scaling, all_has_length);
 
-			if(!g){
+			if((!g) && (!rest_or_long_rests_detected) ){
 				render_empty_rythm_slash(paper, body_base, y_rs_area_base + rdy,
 						m.body_width, 4, m.body_scaling);
 			}

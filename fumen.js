@@ -2618,12 +2618,12 @@ var rs_prev_meas_coord = null;
 var rs_prev_has_tie = false;
 var rs_prev_tie_paper = null;
 
-function render_empty_rythm_slash(paper, x_body_base, rs_y_base, body_width, numslash, body_scaling)
+function render_empty_rythm_slash(paper, x_body_base, rs_y_base, _5lines_intv, body_width, numslash, body_scaling)
 {
 	var group = paper.set();
 	for(var r = 0; r < numslash; ++r){
 		var x = x_body_base + body_width / 4.0 * r;
-		raphaelSlash(paper, group, x, rs_y_base, '0', 0);
+		raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), '0', 0);
 	}
 }
 
@@ -2667,7 +2667,7 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		}
 	}
 	center_y = Math.floor(center_y / cnt_y);
-	var upper_flag = center_y > rs_y_base;
+	var upper_flag = center_y > (rs_y_base + _5lines_intv*2.5);
 
 	var ps = balken.groups[0].coord;
 	var pe = balken.groups[balken.groups.length-1].coord;
@@ -2696,10 +2696,10 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		if(balken.groups[gbi].type == "slash"){
 			var dots = balken.groups[gbi].dots;
 			if(d == '0' || d == '1'){
-				raphaelSlash(paper, group, x, rs_y_base, d, dots.length);
+				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, dots.length);
 			}else{
-				raphaelSlash(paper, group, x, rs_y_base, d, dots.length);
-				var o = paper.path("M"+x+","+rs_y_base + "L"+x+","+(rs_y_base+barlen)).attr({'stroke-width':'1px'});
+				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, dots.length);
+				var o = paper.path("M"+x+","+(rs_y_base + _5lines_intv*2.5) + "L"+x+","+((rs_y_base + _5lines_intv*2.5)+barlen)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
 		}else if(balken.groups[gbi].type == "notes"){
@@ -2721,13 +2721,13 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 				// Draw additional lines
 				for(var p5i = pos_on_5lines[ci]; p5i <= -2; ++p5i){
 					if(p5i % 2 != 0) continue;
-					var a5y = _5lines_intv/2 * (3 - p5i); // rs_y_base corresponds to pos#3
+					var a5y = _5lines_intv/2 * (8 - p5i); // rs_y_base corresponds to pos#3
 					var o = paper.path(svgLine(x-3, rs_y_base + a5y, x+12, rs_y_base + a5y)).attr({'stroke-width':'1px'});
 					group.push(o);
 				}
 				for(var p5i = pos_on_5lines[ci]; p5i >=10; --p5i){
 					if(p5i % 2 != 0) continue;
-					var a5y = _5lines_intv/2 * (3 - p5i); // rs_y_base corresponds to pos#3
+					var a5y = _5lines_intv/2 * (8 - p5i); // rs_y_base corresponds to pos#3
 					var o = paper.path(svgLine(x-3, rs_y_base + a5y, x+12, rs_y_base + a5y)).attr({'stroke-width':'1px'});
 					group.push(o);
 				}
@@ -2906,7 +2906,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 
 			drawn = true;
 
-			group_y.push(rs_y_base);
+			group_y.push(parseInt(rs_y_base + _5lines_intv*2.5)); // center
 			pos_on_5lines.push(4); // Not used, but put center line for now.
 		}else if(notes_only){
 			// notes_only
@@ -2924,7 +2924,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 					var dy = _5lines_intv/2; // 1/2 of interval of 5 lines
 					var NLIST={'C':0,'D':1,'E':2,'F':3,'G':4,'A':5,'B':6};
 					var yoffset = NLIST[nr[nri].note[0]]*dy  + dy*7*(nr[nri].note[2]-3); // C3 offset = 0
-					var ypos = rs_y_base + dy*5 - yoffset; // rs_y_base corresopnds to the center of rs region and is corresponding to A3 when the notes are drawn with "top".
+					var ypos = rs_y_base + dy*10 - yoffset; // rs_y_base corresopnds to the center of rs region and is corresponding to A3 when the notes are drawn with "top".
 					var pos_on_5line = Math.round(yoffset/(dy)) - 2;
 					group_y.push(ypos);
 					pos_on_5lines.push(pos_on_5line);
@@ -3350,16 +3350,15 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 		// Draw Rythm Slashes
 		if(rs_area_detected){
-			var rdy = 15; // Magic Number to place the slash at the center of 5 lines
 			var g = render_rhythm_slash(
 					chord_and_rests, paper,
-					y_rs_area_base + rdy,
+					y_rs_area_base,
 					_5lines_intv,
 					meas_start_x, meas_end_x,
 					draw, 0, m.body_scaling, all_has_length);
 
 			if((!g) && (!rest_or_long_rests_detected) ){
-				render_empty_rythm_slash(paper, body_base, y_rs_area_base + rdy,
+				render_empty_rythm_slash(paper, body_base, y_rs_area_base, _5lines_intv,
 						m.body_width, 4, m.body_scaling);
 			}
 		}

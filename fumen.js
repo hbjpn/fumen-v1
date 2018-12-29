@@ -476,8 +476,8 @@ function Measure()
 function Rest(length_s)
 {
 	this.length_s = length_s;
-	var li = parseLengthIndicator(length_s);
-	this.length = li.length;
+	this.lengthIndicator = parseLengthIndicator(length_s);
+	this.length = this.lengthIndicator.length;
 	this.renderprop = {};
 }
 
@@ -576,7 +576,9 @@ function getNoteProfile(note_str)
 // Parse strings of number + dot
 function parseLengthIndicator(length_s)
 {
-	var mm = length_s.match(/(1|2|4|8|16|32|64)((3|5|6|7)|(\.+))?/);
+	var mm = length_s.match(/(1|2|4|8|16|32|64)((3|5|6|7)|(\.+))?(\~)?/);
+	if(!mm) return null;
+
 	var base = parseInt(mm[1]);
 	var length = 0;
 	if(mm[3]){
@@ -592,7 +594,7 @@ function parseLengthIndicator(length_s)
 			length += tp;
 		}
 	}
-	return {length:length,base:base,renpu:renpu,numdot:numdot};
+	return {length:length,base:base,renpu:renpu,numdot:numdot,has_tie:mm[5]?true:false};
 }
 
 function parseChordNotes(str)
@@ -625,9 +627,9 @@ function parseChordNotes(str)
 			throw "INVALID_TOKEN_DETECTED";
 
 		var length_s = m[1]+(m[2]?m[2]:""); // "number + .";
-		var li = parseLengthIndicator(length_s);
+		var li = parseLengthIndicator(m[0]);
 
-		return {s:sng.substr(m[0].length),ng:{nr:nr,length_s:length_s,length:li.length,has_tie:m[3]?true:false}};
+		return {s:sng.substr(m[0].length),ng:{nr:nr,lengthIndicator:li,length_s:length_s,length:li.length,has_tie:m[3]?true:false}};
 	};
 
 	var nglist = [];
@@ -661,8 +663,12 @@ function Chord(chord_str)
 	this.exceptinal_comment = null;
 	this.lyric = null;
 
+	this.lengthIndicator = null;
+
+	this.nglist = null;
+
 	// Analyze Chord symbol
-	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(?:\/(A|B|C|D|E|F|G)(#|b)?)?)(:(((\d+)(\.*))|(\(.*\))))?(\~)?/;
+	var r = /^(((A|B|C|D|E|F|G)(#|b)?([^\/\:]*))?(\/(A|B|C|D|E|F|G)(#|b)?)?)(:(((\d+)(\.*)(\~)?)|(\(.*\))))?/;
 	var m = chord_str.match(r);
 	//console.log(m);
 	// [0] is entire matched string
@@ -686,17 +692,19 @@ function Chord(chord_str)
 		if(m[9]){
 
 			if(m[11]){
-				var li = parseLengthIndicator(m[9]);
-				this.length_s = m[9];
+				var li = parseLengthIndicator(m[11]);
+				this.length_s = m[11];
 				this.length = li.length;
-			}else if(m[13]){
+				this.lengthIndicator = li;
+				this.tie = li.has_tie;
+			}else if(m[15]){
 				// Notes
-				this.nglist = parseChordNotes(m[13]);
+				this.nglist = parseChordNotes(m[15]);
 				console.log(this.nglist);
 			}
 		}
 
-		this.tie = (m[14] == '~');
+		//this.tie = (m[14] == '~');
 	}else{
 		this.chord_name_str = this.chord_str;
 		this.is_valid_chord = false;

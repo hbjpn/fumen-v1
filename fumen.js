@@ -3212,8 +3212,12 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				chord_name_str = e.chord_name_str;
 			}else if(e instanceof Rest){
 				var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
-				var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14, 128:14};
-				var rd = parseInt(e.length_s);
+				var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14};
+				var dot_xoffsets = {1:16, 2:16, 4:10, 8:12, 16:14, 32:16, 64:18};
+				//var rd = parseInt(e.length_s);
+				var rrm = e.length_s.match(/([0-9]+)(\.*)/);
+				var rd = parseInt(rrm[1]);
+				var numdot = rrm[2].length;
 				var rg = paper.set();
 				var oy = yoffsets[rd];
 				var fs = 14;
@@ -3228,6 +3232,10 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 						var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "realbook_music_symbol");
 						rg.push(text);
 					}
+				}
+				// dots
+				for(var di = 0; di < numdot; ++di){
+					rg.push( paper.circle(x + dot_xoffsets[rd] + di*5, y_rs_area_base + param.row_height/2 - _5lines_intv/2,1).attr({'fill':'black'}) );
 				}
 				//x += rg.getBBox().width * m.body_scaling;
 				x += C7_width * x_global_scale * m.body_scaling;

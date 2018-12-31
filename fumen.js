@@ -2706,6 +2706,7 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		var ys = balken.groups[gbi].coord[1];
 		var d = balken.groups[gbi].onka;
 		var pos_on_5lines = balken.groups[gbi].pos_on_5lines;
+		var sharp_flats = balken.groups[gbi].sharp_flats;
 
 		if(balken.groups[gbi].type == "slash"){
 			var numdot = balken.groups[gbi].numdot;
@@ -2732,6 +2733,15 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 				}
 				group.push(text);
 
+				// draw sharp, flat and natrual
+				// http://finale-hossy.sakura.ne.jp/finale/2011/11/post-18.html
+				if(sharp_flats[ci]){
+					var SFN_YSHIFTS = {'b':-3, '#':0};
+					text = raphaelText(paper, x-10, y+SFN_YSHIFTS[sharp_flats[ci]],
+						sharp_flats[ci], 14, "lc", "smart_music_symbol");
+					group.push(text);
+				}
+
 				// Draw additional lines
 				for(var p5i = pos_on_5lines[ci]; p5i <= -2; ++p5i){
 					if(p5i % 2 != 0) continue;
@@ -2751,7 +2761,7 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 
 			}else{
 				var y0 = upper_flag ? Math.max.apply(null,ys) : Math.min.apply(null,ys);
-				// Draw the basic vertical line. For the note with hat, some additional length will be added when to draw flags.
+				// Draw the basic vertical line. For the note with standalone flag(s), some additional length will be added when to draw flags.
 				var o = paper.path(svgLine(x+deltax, y0, x+deltax, slope*(x+deltax)+intercept)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
@@ -2918,6 +2928,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 		var group_y = [];
 		var pos_on_5lines = []; // For notes only. bottom line is 0, second bottom line is 2, ... top line is 8
 		var has_tie = false;
+		var sharp_flats = [];
 
 		if(rhythm_only){
 			chord_length = e.lengthIndicator.length;
@@ -2949,6 +2960,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 					var pos_on_5line = Math.round(yoffset/(dy)) - 2;
 					group_y.push(ypos);
 					pos_on_5lines.push(pos_on_5line);
+					sharp_flats.push(nr[nri].note[1]); // TODO : To consider key and judge if #,b or natural is required.
 				}
 			}
 		}else{
@@ -2972,7 +2984,8 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 				onka : d,
 				has_tie : has_tie,
 				pos_on_5lines : pos_on_5lines, // for notes only
-				renpu : (e.lengthIndicator ? e.lengthIndicator.renpu : e.nglist[0].lengthIndicator.renpu)
+				renpu : (e.lengthIndicator ? e.lengthIndicator.renpu : e.nglist[0].lengthIndicator.renpu),
+				sharp_flats : sharp_flats // for notes only
 			});
 			if(chord_length >= WHOLE_NOTE_LENGTH/4 || balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 || ei == elems.length-1){
 				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);

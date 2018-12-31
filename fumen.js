@@ -475,9 +475,7 @@ function Measure()
 
 function Rest(length_s)
 {
-	this.length_s = length_s;
-	this.lengthIndicator = parseLengthIndicator(length_s);
-	this.length = this.lengthIndicator.length;
+	this.nglist = [ {lengthIndicator:parseLengthIndicator(length_s), nr:null} ];
 	this.renderprop = {};
 }
 
@@ -570,7 +568,7 @@ function getNoteProfile(note_str)
 	var m = note_str.match(/([A-G])(#|b)?(\d+)/);
 	if(!m) return null;
 	var code = parseInt(m[3])*12 + IDX[m[1]] + (m[2]=='#'?1:-1) - 36 + 0x3C; // C3 bocomes 0x3C
-	return {code:code, note:[m[1],m[2],m[3]]};
+	return {code:code, note:{name:m[1],accidental:m[2],octave:parseInt(m[3])}};
 }
 
 // Parse strings of number + dot
@@ -581,6 +579,7 @@ function parseLengthIndicator(length_s)
 
 	var base = parseInt(mm[1]);
 	var length = 0;
+	var numdot = 0;
 	if(mm[3]){
 		// Renpu
 		var renpu = parseInt(mm[4]);
@@ -588,7 +587,7 @@ function parseLengthIndicator(length_s)
 	}else{
 		length = WHOLE_NOTE_LENGTH / base;
 		var tp = length;
-		var numdot = mm[5] ? mm[5].length : 0;
+		numdot = mm[5] ? mm[5].length : 0;
 		for(var j = 0; j < numdot; ++j){
 			tp /= 2;
 			length += tp;
@@ -663,7 +662,7 @@ function Chord(chord_str)
 	this.exceptinal_comment = null;
 	this.lyric = null;
 
-	this.lengthIndicator = null;
+	//this.lengthIndicator = null;
 
 	this.nglist = null;
 
@@ -672,6 +671,9 @@ function Chord(chord_str)
 	var m = chord_str.match(r);
 	//console.log(m);
 	// [0] is entire matched string
+
+	this.chord_name_str = null;
+
 	if( m && m[0] != ""){
 		this.chord_name_str = m[1];
 		this.note_base = m[3];
@@ -695,7 +697,7 @@ function Chord(chord_str)
 				var li = parseLengthIndicator(m[11]);
 				//this.length_s = m[11];
 				//this.length = li.length;
-				this.lengthIndicator = li;
+				this.nglist = [{lengthIndicator:li,nr:null}];
 				//this.tie = li.has_tie;
 			}else if(m[15]){
 				// Notes
@@ -2330,20 +2332,22 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 }
 
 function render_chord_as_string(chord, transpose, half_type, paper, x, y_body_base,
-		param, draw, chord_space, x_global_scale, body_scaling)
+		param, draw)
 {
 	var row_height = param.row_height;
 
 	var group = paper.set();
 
 	var text = raphaelText(paper, x, y_body_base + row_height/2, chord.chord_str, 16, "lc", null);
-	x += text.getBBox().width * x_global_scale * body_scaling;
-	x += (chord_space*body_scaling);
+
+	var text_width = text.getBBox().width;
+	//x += text.getBBox().width * x_global_scale * body_scaling;
+	//x += (chord_space*body_scaling);
 	if(!draw) text.remove();
 
 	group.push(text);
 
-	return {group:group, x:x};
+	return {group:group, width:text_width};
 }
 
 var ChordRenderBuffer = {
@@ -2351,16 +2355,16 @@ var ChordRenderBuffer = {
 };
 
 function render_chord(chord, transpose, half_type, paper, x, y_body_base,
-		param, draw, C7_width, chord_space, x_global_scale, body_scaling, theme)
+		param, draw, C7_width, theme)
 {
 	var row_height = param.row_height;
 
-	chord.renderprop.x = x;
+	//chord.renderprop.x = x;
 
 	if(!chord.is_valid_chord)
 	{
 		return render_chord_as_string(chord, transpose, half_type, paper, x, y_body_base,
-				param, draw, chord_space, x_global_scale, body_scaling);
+				param, draw);
 	}
 
 	var ref_p = [x, y_body_base];
@@ -2372,12 +2376,12 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		group.attr({opacity:1.0}); // Buffered symbol is transparent.
 		var ref_p_0 = cl[1];
 		group.transform("T " + (ref_p[0]-ref_p_0[0]) + " " + (ref_p[1]-ref_p_0[1]));
-		x += group.getBBox().width * x_global_scale * body_scaling;
-		x += (chord_space*body_scaling);
-		if(!isFinite(x)){
-			console.error("Illegal calculation of x detected");
-		}
-		return {group:group, x:x};
+		//x += group.getBBox().width * x_global_scale * body_scaling;
+		//x += (chord_space*body_scaling);
+		//if(!isFinite(x)){
+		//	console.error("Illegal calculation of x detected");
+		//}
+		return {group:group, width:group.getBBox().width};
 	}
 
 	var bases = chord.getChordStrBase(transpose, half_type);
@@ -2386,8 +2390,8 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 
 	// if bases are null, elems are null, then it is just a duration information
 	if ( bases[0] == null && bases[1] == null && elems === undefined ){
-		x += (C7_width * x_global_scale * body_scaling + chord_space * body_scaling);
-		return {group:group, x:x};
+		//x += (C7_width * x_global_scale * body_scaling + chord_space * body_scaling);
+		return {group:group, width:C7_width};
 	}
 
 	var _3rdelem = [];
@@ -2569,8 +2573,9 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 		xl += on_bass_width;
 	}
 
-	x += group.getBBox().width * x_global_scale * body_scaling;
-	x += (chord_space*body_scaling);
+	//x += group.getBBox().width * x_global_scale * body_scaling;
+	//x += (chord_space*body_scaling);
+	var chord_width = group.getBBox().width;
 	if(!draw) text.remove();
 
 	if(draw){
@@ -2581,7 +2586,7 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	if(!isFinite(x)){
 		console.error("Illegal calculation of x detected");
 	}
-	return {group:group, x:x};
+	return {group:group, width:chord_width};
 }
 
 function raphaelSlash(paper, group, x, y, d, numdot)
@@ -2765,6 +2770,10 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 				var o = paper.path(svgLine(x+deltax, y0, x+deltax, slope*(x+deltax)+intercept)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
+		}else if(balken.groups[gbi].type == "rest"){
+			// Do nothing
+			// Currently this code will not be used.
+			// When cater for the optimized balken for triplets ... this needs to be implemented.
 		}
 
 		if(rs_prev_has_tie){
@@ -2878,7 +2887,7 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 				}
 			}
 		}
-	}else if(balken.groups.length == 1){
+	}else if(balken.groups.length == 1 && balken.groups[0].type != "rest"){
 		// Normal drawing of flags
 		var x = balken.groups[0].coord[0];
 		var d = balken.groups[0].onka;
@@ -2892,6 +2901,36 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 			var line  = paper.path(svgLine(x+deltax, slope*(x+deltax)+intercept, x+deltax, slope*(x+deltax)+intercept + (upper_flag ? - 8 : 8))).attr({'stroke-width':'1px'});
 			group.push(line);
 		}
+	}
+}
+
+function getAppropriateVerticalPos(nglist, key, context)
+{
+	// TODO : implmentation
+}
+
+/*
+ * Guess rough estimation of width of chord, other than the chord notation
+ */
+function guessRSorNoteWidth(chord)
+{
+	if(chord.nglist){
+		var rinji_mark = false;
+		var max_numdot = 0;
+
+		if(chord.nglist[0].nr == null) return 20; // slash
+
+		chord.nglist.forEach(function(ng){
+			ng.nr.forEach(function(np){
+				if( np.note.accidental ) rinji_mark = true; 		// TODO : To cater for keys and overlapped notes
+			});
+			max_numdot = Math.max(ng.lengthIndicator.numdot, max_numdot);
+		});
+
+		return 20 + (rinji_mark ? 20 : 0) + 10 * max_numdot;
+
+	}else{
+		return 0;
 	}
 }
 
@@ -2913,81 +2952,79 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 
 		// Rests also get into here but not drawn in this function.
 		// Only the length is taken for Rest.
-		if(e instanceof Rest){
-			if(all_has_length) balken.sum_len += e.lengthIndicator.length;
+		//if(e instanceof Rest){
+		//	if(all_has_length) balken.sum_len += e.nglist[0].lengthIndicator.length;
+		//	continue;
+		//}
+
+		// no duration information
+		if(e.nglist === null)
 			continue;
-		}
 
 		var x = e.renderprop.x;
 		var barlen = 15;
 		var flagintv = 5;
 		var chord_length = 10000000;
 
-		var rhythm_only = e.lengthIndicator !== null; //(e.length_s !== null && e.length_s !== undefined);
-		var notes_only = e.nglist !== null; //(e.nglist !== null && e.nglist !== undefined);
+		var rhythm_only = (e.nglist[0].nr === null);
 		var group_y = [];
 		var pos_on_5lines = []; // For notes only. bottom line is 0, second bottom line is 2, ... top line is 8
 		var has_tie = false;
 		var sharp_flats = [];
 
-		if(rhythm_only){
-			chord_length = e.lengthIndicator.length;
-			var d = e.lengthIndicator.base; //e.length_s.match(/[0-9]+/)[0];
-			var numdot = e.lengthIndicator.numdot; // = e.length_s.substr(d.length);
-			has_tie = e.lengthIndicator.has_tie; //e.tie;
-
-			drawn = true;
-
-			group_y.push(parseInt(rs_y_base + _5lines_intv*2.5)); // center
-			pos_on_5lines.push(4); // Not used, but put center line for now.
-		}else if(notes_only){
-			// notes_only
-			drawn = true;
-			// Currently only one ng is assumed
-			for(var ngi=0; ngi < e.nglist.length; ++ngi){
-				var ng = e.nglist[ngi];
-				var nr = ng.nr;
-				var d = ng.lengthIndicator.base; //ng.length_s.match(/[0-9]+/)[0];
-				var numdot = ng.lengthIndicator.numdot; //ng.length_s.substr(d.length);
-				chord_length = Math.min(ng.lengthIndicator.length,chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
-				has_tie = ng.lengthIndicator.has_tie; //ng.has_tie;
-
+		drawn = true;
+		// Currently only one ng is assumed
+		for(var ngi=0; ngi < e.nglist.length; ++ngi){
+			var ng = e.nglist[ngi];
+			var nr = ng.nr;
+			var d = ng.lengthIndicator.base; //ng.length_s.match(/[0-9]+/)[0];
+			var numdot = ng.lengthIndicator.numdot; //ng.length_s.substr(d.length);
+			chord_length = Math.min(ng.lengthIndicator.length,chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
+			has_tie = ng.lengthIndicator.has_tie; //ng.has_tie;
+			if(nr === null){
+				// slash
+				group_y.push(parseInt(rs_y_base + _5lines_intv*2.5)); // center
+				pos_on_5lines.push(4); // Not used, but put center line for now.
+			}else{
+				// notes
 				for(var nri=0; nri < nr.length; ++nri){
 					var dy = _5lines_intv/2; // 1/2 of interval of 5 lines
 					var NLIST={'C':0,'D':1,'E':2,'F':3,'G':4,'A':5,'B':6};
-					var yoffset = NLIST[nr[nri].note[0]]*dy  + dy*7*(nr[nri].note[2]-3); // C3 offset = 0
+					var yoffset = NLIST[nr[nri].note.name]*dy  + dy*7*(nr[nri].note.octave-3); // C3 offset = 0
 					var ypos = rs_y_base + dy*10 - yoffset; // rs_y_base corresopnds to the center of rs region and is corresponding to A3 when the notes are drawn with "top".
 					var pos_on_5line = Math.round(yoffset/(dy)) - 2;
 					group_y.push(ypos);
 					pos_on_5lines.push(pos_on_5line);
-					sharp_flats.push(nr[nri].note[1]); // TODO : To consider key and judge if #,b or natural is required.
+					sharp_flats.push(nr[nri].note.accidental); // TODO : To consider key and judge if #,b or natural is required.
 				}
 			}
-		}else{
-			continue;
 		}
+
 
 		if(all_has_length){
 			// TODO : To cater for multi-group notes rendering
 
 			// Flush current groups
-			if(chord_length >= WHOLE_NOTE_LENGTH/4 && balken.groups.length > 0){
+			if( (chord_length >= WHOLE_NOTE_LENGTH/4 || e instanceof Rest) && balken.groups.length > 0){
 				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
 				balken.groups = [];
 			}
 			balken.sum_len += chord_length;
 			balken.groups.push({
 				e : e,
-				type : rhythm_only ? "slash" : "notes",
+				type : (e instanceof Rest ? "rest" : (rhythm_only ? "slash" : "notes")),
 				numdot : numdot,
 				coord : [e.renderprop.x, group_y],
 				onka : d,
 				has_tie : has_tie,
 				pos_on_5lines : pos_on_5lines, // for notes only
-				renpu : (e.lengthIndicator ? e.lengthIndicator.renpu : e.nglist[0].lengthIndicator.renpu),
+				renpu : e.nglist[0].lengthIndicator.renpu,
 				sharp_flats : sharp_flats // for notes only
 			});
-			if(chord_length >= WHOLE_NOTE_LENGTH/4 || balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 || ei == elems.length-1){
+			if(e instanceof Rest ||
+				 chord_length >= WHOLE_NOTE_LENGTH/4 ||
+				 balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 ||
+				 ei == elems.length-1){
 				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
 				balken.groups = [];
 			}
@@ -3014,6 +3051,43 @@ function new_row_yinfo()
 		maxheight: 0
 	};
 	return rowyinfo;
+}
+
+function render_rest(e, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, param)
+{
+	var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
+	var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14};
+	var dot_xoffsets = {1:16, 2:16, 4:10, 8:12, 16:14, 32:16, 64:18};
+	//var rd = parseInt(e.length_s);
+	//var rrm = e.length_s.match(/([0-9]+)(\.*)/);
+	var rd = e.nglist[0].lengthIndicator.base; //parseInt(rrm[1]);
+	var numdot = e.nglist[0].lengthIndicator.numdot; //rm[2].length;
+	var rg = paper.set();
+	var oy = yoffsets[rd];
+	var fs = 14;
+	if(rd <= 4){
+		var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2 + oy, cmap[rd], fs, "lc", "realbook_music_symbol");
+		rg.push(text);
+	}else{
+		var nKasane = myLog2(rd) - 2;
+		var rdx = 2;
+		var rdy = -7;
+		for(var k = 0; k < nKasane; ++k){
+			var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "realbook_music_symbol");
+			rg.push(text);
+		}
+	}
+	// dots
+	for(var di = 0; di < numdot; ++di){
+		rg.push( paper.circle(x + dot_xoffsets[rd] + di*5, y_rs_area_base + param.row_height/2 - _5lines_intv/2,1).attr({'fill':'black'}) );
+	}
+	//x += rg.getBBox().width * m.body_scaling;
+	//x += C7_width * x_global_scale * m.body_scaling;
+	//x += (chord_space*m.body_scaling);
+	//e.renderprop.x = x;
+	if(!draw) rg.remove();
+
+	return {group:rg, width:C7_width};
 }
 
 function render_measure_row(x, paper, x_global_scale, transpose, half_type,
@@ -3048,8 +3122,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			if(e instanceof Coda || e instanceof Segno || e instanceof Comment || e instanceof LoopIndicator || e instanceof ToCoda){
 				mu_area_detected = true;
 			}else if(e instanceof Chord){
-				rs_area_detected |= (e.lengthIndicator !== null);
-				rs_area_detected |= (e.nglist != null);
+				rs_area_detected |= (e.nglist !== null);
 			}else if( e instanceof Lyric){
 				ml_area_detected = true;
 				lyric_rows = Math.max(e.lyric.split("/").length, lyric_rows);
@@ -3194,47 +3267,129 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		// First, guess chord duration here.
 		// In current version, each chord in the measure is assumed to have the same duration.
 		// TODO : Improve based on number of spaces or duration indication mark.
-		var num_chord_in_a_measure = 0;
 		var all_has_length = true;
 		var sum_length = 0.0;
 
-		var chord_and_rests = [];
-		for(var ei = 0; ei < elements.body.length; ++ei)
-		{
-			var e = elements.body[ei];
-			if(e instanceof Chord || e instanceof Rest){
-				++num_chord_in_a_measure;
-				all_has_length &= (e.lengthIndicator !== null || e.nglist !== null);
-				if(all_has_length){
-					if(e.lengthIndicator)
-						sum_length += e.lengthIndicator.length;
-					else if(e.nglist)
-						sum_length += e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
-				}
-				chord_and_rests.push(e);
-			}
-		}
-
 		var chord_name_str = null;
 
+		var chord_space_list = []; // for chord and rest
+
+		var local_x = 0;
+		var base_space = 10;
+
+		elements.body.forEach(function(e){
+			all_has_length &= (e.nglist !== null );
+			if(all_has_length) sum_length += e.nglist[0].lengthIndicator.length;
+		});
+
+		var tmpl = {elems:[],groupedChordsLen:0};
+		var groupedBodyElems = [];
+
+		if(elements.body.length > 0) groupedBodyElems.push(jQuery.extend(true,{},tmpl));
+		var gbei = 0;
+
+		elements.body.forEach(function(e){
+			if(g_prev_chord_has_tie ||
+				 chord_name_str === null ||
+				 e.chord_name_str == "" ||
+				(e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str))){
+
+			}else{ // flush
+				groupedBodyElems.push(jQuery.extend(true,{},tmpl));
+				++gbei;
+			}
+
+			var chord_space = 0;
+			if(all_has_length){
+				var this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
+				chord_space = Math.floor(base_space / sum_length*this_chord_len);
+			}else{
+				chord_space = Math.floor(base_space / 1 /*num_chord_in_a_measure*/);
+			}
+			var width = ( (chord_space + guessRSorNoteWidth(e)) * x_global_scale * m.body_scaling);
+			groupedBodyElems[gbei].groupedChordsLen += width;
+			groupedBodyElems[gbei].elems.push({width:width,e:e});
+
+			g_prev_chord_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
+			chord_name_str = e.chord_name_str;
+		});
+
+		groupedBodyElems.forEach(function(body_elems){
+			if(!body_elems.elems[0]){
+				alert("nn--");
+			}
+			var e0 = body_elems.elems[0].e;
+			var chord_symbol_width = 0;
+			if(e0 instanceof Chord){
+				var cr = render_chord(e0, transpose, half_type, paper, x, y_body_base,
+						param, draw, C7_width, theme);
+				chord_symbol_width = (cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
+			}else if(e0 instanceof Rest){
+				var rr = render_rest(e0, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, param);
+				chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
+			}
+
+			var group_scaling = Math.max(1.0, chord_symbol_width/parseFloat(body_elems.groupedChordsLen));
+
+			body_elems.elems.forEach(function(es, ei){
+				es.e.renderprop.x = x;
+				x += (es.width * group_scaling);
+			});
+
+			body_elems.elems.forEach(function(es, ei){
+
+				var e = es.e;
+
+				if(e instanceof Chord){
+
+					if(e.exceptinal_comment !== null){
+						if(draw)
+							var g = raphaelText(paper, e.renderprop.x, y_body_base,
+								e.exceptinal_comment.comment, 15, "lb");
+					}
+					if(e.lyric !== null){
+						if(draw){
+							var llist = e.lyric.lyric.split("/");
+							for(var li=0; li < llist.length; ++li){
+								var g = raphaelText(paper, e.renderprop.x, y_ml_area_base + li*param.ml_row_height,
+									llist[li], 10, "lt");
+							}
+						}
+					}
+				}else if(e instanceof Rest){
+					if(ei == 0) return; // skip as already drawn
+
+					var rr = render_rest(e0, paper, draw, e.renderprop.x, y_rs_area_base, C7_width, _5lines_intv, param);
+					if(!draw) rr.group.remove();
+
+				}else{
+					throw "ERROR";
+				}
+			});
+		});
+
+/*
 		for(var ei = 0; ei < elements.body.length; ++ei)
 		{
 			var e = elements.body[ei];
 
 			var chord_space = 0;
 			if(all_has_length){
-				var this_chord_len = 0;
-				if(e.lengthIndicator)
-					this_chord_len = e.lengthIndicator.length;
-				else if(e.nglist)
-					this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
-				chord_space = Math.floor(40*x_global_scale / sum_length*this_chord_len);
+				var this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
+				chord_space = Math.floor(base_space*x_global_scale / sum_length*this_chord_len);
 			}else
-				chord_space = Math.floor(40*x_global_scale / num_chord_in_a_measure);
+				chord_space = Math.floor(base_space*x_global_scale / num_chord_in_a_measure);
 
 			if(e instanceof Chord){
 				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
 						param, draw, C7_width, chord_space, x_global_scale, m.body_scaling, theme);
+				x += cr.width * x_global_scale * m.body_scaling + chord_space * m.body_scaling; // modoru
+				//x += text.getBBox().width * x_global_scale * body_scaling;
+				//x += (chord_space*body_scaling);
+				//x = cr.x;
+				if(!isFinite(x)){
+					console.log("Illegal calculation of x is detected");
+				}
 				if(e.exceptinal_comment !== null){
 					if(draw)
 						var g = raphaelText(paper, x, y_body_base,
@@ -3249,17 +3404,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 						}
 					}
 				}
-				x = cr.x;
-				if(!isFinite(x)){
-					console.log("Illegal calculation of x is detected");
-				}
 				// If chord is continued from the previous chord with tie, or
 				// more than 1 adjacent valid chords are the same,
 				// the chord(s) except the first one are not drawn. This is not applied for invalid chord.
 				if(g_prev_chord_has_tie || (e.is_valid_chord && (chord_name_str == e.chord_name_str))){
 					cr.group.remove(); // Not draw chord symbol
 				}
-				g_prev_chord_has_tie = ( e.lengthIndicator ? e.lengthIndicator.has_tie : false );
+				g_prev_chord_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
 				chord_name_str = e.chord_name_str;
 			}else if(e instanceof Rest){
 				var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
@@ -3267,8 +3418,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				var dot_xoffsets = {1:16, 2:16, 4:10, 8:12, 16:14, 32:16, 64:18};
 				//var rd = parseInt(e.length_s);
 				//var rrm = e.length_s.match(/([0-9]+)(\.*)/);
-				var rd = e.lengthIndicator.base; //parseInt(rrm[1]);
-				var numdot = e.lengthIndicator.numdot; //rm[2].length;
+				var rd = e.nglist[0].lengthIndicator.base; //parseInt(rrm[1]);
+				var numdot = e.nglist[0].lengthIndicator.numdot; //rm[2].length;
 				var rg = paper.set();
 				var oy = yoffsets[rd];
 				var fs = 14;
@@ -3298,6 +3449,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				throw "ERROR";
 			}
 		}
+		*/
 
 		if(elements.body.length == 0)
 		{
@@ -3396,7 +3548,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		// Draw Rythm Slashes
 		if(rs_area_detected){
 			var g = render_rhythm_slash(
-					chord_and_rests, paper,
+					elements.body, paper,
 					y_rs_area_base,
 					_5lines_intv,
 					meas_start_x, meas_end_x,

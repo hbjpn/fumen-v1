@@ -2253,6 +2253,8 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 {
 	var row_height = param.row_height;
 
+	var group = paper.set();
+
 	var draw_type = null; // "s, d, lb, le, lb, f"
 
 
@@ -2260,7 +2262,7 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 
 	if(side == 'end'){
 		var thisIsLastMeasureInLine = (e1 === null) || ( hasNewLine );
-		if(!thisIsLastMeasureInLine) return {x:x, bx:bx};
+		if(!thisIsLastMeasureInLine) return {group:null, x:x, bx:bx};
 	}
 
 	if(hasNewLine === null || hasNewLine == false){
@@ -2273,62 +2275,62 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 	case 'd':
 		var nline = draw_type == 's' ? 1 : 2;
 		for(var li = 0; li < nline; ++li){
-			if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
+			if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 			if(nline >= 2 && li < nline-1) x += 3;
 		}
 		bx = x;
 		break;
 	case 'b':
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"}) );
 		x += 3;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 		x += 4;
-		if(draw) paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"});
-		if(draw) paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"});
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"}) );
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"}) );
 		break;
 	case 'e':
-		if(draw) paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"});
-		if(draw) paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"});
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"}) );
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"}) );
 		x += 4;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 		x += 3;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"}) );
 		//x += 20;
 		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
 			stimes = e0.ntimes == true ? "X" : ""+e0.times;
-			if(draw) text = raphaelText(paper, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc");
+			if(draw) group.push( raphaelText(paper, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc") );
 		}
 		bx = x;
 		break;
 	case 'B':
-		if(draw) paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"});
-		if(draw) paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"});
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"}) );
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"}) );
 		x += 4;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 		x += 3;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"}) );
 		bx = x;
 		x += 3;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 
 		//x += 20;
 		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
 			stimes = e0.ntimes == true ? "X" : ""+e0.times;
-			if(draw) text = raphaelText(paper, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc");
+			if(draw) group.push( raphaelText(paper, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc") );
 		}
 		x += 4;
-		if(draw) paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"});
-		if(draw) paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"});
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*1.5, 1).attr({fill:"black"}) );
+		if(draw) group.push( paper.circle(x, y_body_base + row_height/4*2.5, 1).attr({fill:"black"}) );
 		break;
 	case 'f':
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 		x += 3;
-		if(draw) paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"});
+		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"}) );
 		break;
 	default:
 		throw "Internal error";
 	}
-	return {x:x, bx:bx};
+	return {group:group, x:x, bx:bx};
 }
 
 function render_chord_as_string(chord, transpose, half_type, paper, x, y_body_base,
@@ -2644,6 +2646,7 @@ function render_empty_rythm_slash(paper, x_body_base, rs_y_base, _5lines_intv, b
 		var x = x_body_base + body_width / 4.0 * r;
 		raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), '0', 0);
 	}
+	return {group:group};
 }
 
 function myLog2(integer)
@@ -2949,14 +2952,6 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 	var group = paper.set();
 	for(var ei = 0; ei < elems.length; ++ei){
 		var e = elems[ei];
-
-		// Rests also get into here but not drawn in this function.
-		// Only the length is taken for Rest.
-		//if(e instanceof Rest){
-		//	if(all_has_length) balken.sum_len += e.nglist[0].lengthIndicator.length;
-		//	continue;
-		//}
-
 		// no duration information
 		if(e.nglist === null)
 			continue;
@@ -3031,7 +3026,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 		}
 	}
 
-	return drawn ? group : null;
+	return {group: drawn ? group : null};
 }
 
 // Rendering globals
@@ -3081,10 +3076,7 @@ function render_rest(e, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, 
 	for(var di = 0; di < numdot; ++di){
 		rg.push( paper.circle(x + dot_xoffsets[rd] + di*5, y_rs_area_base + param.row_height/2 - _5lines_intv/2,1).attr({'fill':'black'}) );
 	}
-	//x += rg.getBBox().width * m.body_scaling;
-	//x += C7_width * x_global_scale * m.body_scaling;
-	//x += (chord_space*m.body_scaling);
-	//e.renderprop.x = x;
+
 	if(!draw) rg.remove();
 
 	return {group:rg, width:C7_width};
@@ -3161,6 +3153,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	var first_meas_start_x = x;
 	var last_meas_end_x = x;
 
+	var rs_area_svg_groups = [];
+
 	// For each measure in this row
 	for(var ml = 0; ml < row_elements_list.length; ++ml){
 		// measure object
@@ -3228,6 +3222,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				m.renderprop.paper = paper;
 				x = r.x;
 				meas_start_x = r.bx;
+
+				if(r.group) rs_area_svg_groups.push(r.group);
 
 				// Header 1. Reharsal mark in row
 				if(inner_reharsal_mark && rs_area_detected && first_block_first_row && ml == 0){
@@ -3315,9 +3311,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		});
 
 		groupedBodyElems.forEach(function(body_elems){
-			if(!body_elems.elems[0]){
-				alert("nn--");
-			}
 			var e0 = body_elems.elems[0].e;
 			var chord_symbol_width = 0;
 			if(e0 instanceof Chord){
@@ -3327,6 +3320,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			}else if(e0 instanceof Rest){
 				var rr = render_rest(e0, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, param);
 				chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
+
+				if(draw) rs_area_svg_groups.push(rr.group);
 			}
 
 			var group_scaling = Math.max(1.0, chord_symbol_width/parseFloat(body_elems.groupedChordsLen));
@@ -3361,6 +3356,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 					var rr = render_rest(e0, paper, draw, e.renderprop.x, y_rs_area_base, C7_width, _5lines_intv, param);
 					if(!draw) rr.group.remove();
+					else rs_area_svg_groups.push(rr.group);
 
 				}else{
 					throw "ERROR";
@@ -3479,6 +3475,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				var r = draw_boundary('end', e, ne, nm ? nm.new_line : false, paper, x, y_rs_area_base, param, draw);
 				m.renderprop.ex = x;
 				x = r.x;
+				if(r.group) rs_area_svg_groups.push(r.group);
 			}else if(e instanceof DaCapo){
 				text = raphaelText(paper, x, y_rs_area_base　- 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
@@ -3554,9 +3551,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 					meas_start_x, meas_end_x,
 					draw, 0, m.body_scaling, all_has_length);
 
-			if((!g) && (!rest_or_long_rests_detected) ){
-				render_empty_rythm_slash(paper, body_base, y_rs_area_base, _5lines_intv,
+			if(g.group) rs_area_svg_groups.push(g.group);
+
+			if((!g.group) && (!rest_or_long_rests_detected) ){
+				var g = render_empty_rythm_slash(paper, body_base, y_rs_area_base, _5lines_intv,
 						m.body_width, 4, m.body_scaling);
+
+				if(g.group) rs_area_svg_groups.push(g.group);
 			}
 		}
 
@@ -3570,8 +3571,24 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		for(var i = 0; i < 5; ++i){
 			var intv = _5lines_intv;
 			var dy = 0;
-			if(draw) paper.path( svgLine([[first_meas_start_x, y_rs_area_base + i*intv + dy],[last_meas_end_x, y_rs_area_base + i*intv + dy]]) ).attr({'stroke-width':'1px'});
+			if(draw){
+				var _5l = paper.path( svgLine([[first_meas_start_x, y_rs_area_base + i*intv + dy],[last_meas_end_x, y_rs_area_base + i*intv + dy]]) ).attr({'stroke-width':'1px'});
+				rs_area_svg_groups.push(_5l);
+			}
 		}
+	}
+
+	// check vertical overlaps
+	var rs_min_y = 100000;
+	var rs_max_y = 0;
+	rs_area_svg_groups.forEach(function(g){
+		rs_min_y = Math.min( g.getBBox().y, rs_min_y );
+		rs_max_y = Math.max( g.getBBox().y2, rs_max_y );
+	});
+	if(rs_min_y < y_rs_area_base){
+		rs_area_svg_groups.forEach(function(g){
+			g.transform("t"+0 +","+(y_rs_area_base - rs_min_y));
+		});
 	}
 
 	// max.apply with 0 length array will generate -inf value, then check if measure_heights has at least one element

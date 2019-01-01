@@ -2686,7 +2686,7 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		}
 	}
 	center_y = Math.floor(center_y / cnt_y);
-	var upper_flag = center_y > (rs_y_base + _5lines_intv*2.5);
+	var upper_flag = center_y > (rs_y_base + _5lines_intv*2);
 
 	var ps = balken.groups[0].coord;
 	var pe = balken.groups[balken.groups.length-1].coord;
@@ -2983,7 +2983,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 			has_tie = ng.lengthIndicator.has_tie; //ng.has_tie;
 			if(nr === null){
 				// slash
-				group_y.push(parseInt(rs_y_base + _5lines_intv*2.5)); // center
+				group_y.push(parseInt(rs_y_base + _5lines_intv*2)); // center
 				pos_on_5lines.push(4); // Not used, but put center line for now.
 			}else{
 				// notes

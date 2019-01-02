@@ -2586,13 +2586,12 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 	return {group:group, width:chord_width};
 }
 
-function raphaelSlash(paper, group, x, y, d, numdot)
+function raphaelSlash(paper, group, x, y, d, numdot, _5lines_intv)
 {
-	var rsgw = 10;
+	var rsgw = _5lines_intv * 2;
 	var rsgh = 10;
-	var rsh = 4;
-	var rsw = 4;
-	var path = svgPath( [[x,y],[x+rsgw,y-rsgh],[x+rsgw,y-rsgh+rsh],[x,y+rsh]], true);
+	var rsh = 3;
+	var path = svgPath( [[x,y+rsgh/2-rsh],[x+rsgw,y-rsgh/2],[x+rsgw,y-rsgh/2+rsh],[x,y+rsgh/2]], true);
 	var obj = null;
 	//var group = paper.set();
 	if(d == '1' || d == '2'){
@@ -2603,9 +2602,9 @@ function raphaelSlash(paper, group, x, y, d, numdot)
 	}
 	group.push(obj);
 	for(var i = 0; i < numdot; ++i){
-		group.push( paper.circle(x+rsgw+5+i*5,y-6,1).attr({'fill':'black'}) );
+		group.push( paper.circle(x+rsgw+5+i*5,y-_5lines_intv/2,1).attr({'fill':'black'}) );
 	}
-	return group;
+	return {group:group, bar_reduction:rsgh/2-rsh};
 }
 
 /*
@@ -2639,7 +2638,7 @@ function render_empty_rythm_slash(paper, x_body_base, rs_y_base, _5lines_intv, b
 	var group = paper.set();
 	for(var r = 0; r < numslash; ++r){
 		var x = x_body_base + body_width / 4.0 * r;
-		raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), '0', 0);
+		raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2), '0', 0, _5lines_intv);
 	}
 	return {group:group};
 }
@@ -2714,10 +2713,10 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		if(balken.groups[gbi].type == "slash"){
 			var numdot = balken.groups[gbi].numdot;
 			if(d == '0' || d == '1'){
-				raphaelSlash(paper, group, x, ys[0], d, numdot);
+				raphaelSlash(paper, group, x, ys[0], d, numdot, _5lines_intv);
 			}else{
-				raphaelSlash(paper, group, x, ys[0], d, numdot);
-				var o = paper.path(svgLine(x, ys[0], x, slope*(x)+intercept)).attr({'stroke-width':'1px'});
+				var rsr = raphaelSlash(paper, group, x, ys[0], d, numdot, _5lines_intv);
+				var o = paper.path(svgLine(x, ys[0] + rsr.bar_reduction, x, slope*(x)+intercept)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
 		}else if(balken.groups[gbi].type == "notes"){

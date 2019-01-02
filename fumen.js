@@ -2714,10 +2714,10 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 		if(balken.groups[gbi].type == "slash"){
 			var numdot = balken.groups[gbi].numdot;
 			if(d == '0' || d == '1'){
-				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, numdot);
+				raphaelSlash(paper, group, x, ys[0], d, numdot);
 			}else{
-				raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2.5), d, numdot);
-				var o = paper.path("M"+x+","+(rs_y_base + _5lines_intv*2.5) + "L"+x+","+((rs_y_base + _5lines_intv*2.5)+barlen)).attr({'stroke-width':'1px'});
+				raphaelSlash(paper, group, x, ys[0], d, numdot);
+				var o = paper.path(svgLine(x, ys[0], x, slope*(x)+intercept)).attr({'stroke-width':'1px'});
 				group.push(o);
 			}
 		}else if(balken.groups[gbi].type == "notes"){

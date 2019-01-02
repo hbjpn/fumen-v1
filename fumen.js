@@ -3151,6 +3151,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	var y_body_or_rs_base = rs_area_detected ? y_rs_area_base : y_body_base;
 
+	// Debug of y-base lines
 	if(false && draw){
 	    var lines = [y_base, y_mu_area_base, y_body_base, y_rs_area_base, y_ml_area_base, y_next_base];
 	    var colors = ["black","red","blue","green","orange","pink"];
@@ -3348,7 +3349,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			body_elems.elems.forEach(function(es, ei){
 				es.e.renderprop.x = x;
 				x += (es.width * group_scaling);
-				console.log("x updated : " + x + " / " + (es.width) + " : " + group_scaling);
 			});
 
 			body_elems.elems.forEach(function(es, ei){
@@ -3728,7 +3728,8 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 			console.group("Macro for " + track.reharsal_groups[i].name);
 			console.log(rg_macros);
 			console.groupEnd();
-			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i],macros:rg_macros});
+			if(global_macros.reharsal_mark_position != "Inner")
+				y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i],macros:rg_macros});
 			var rg = track.reharsal_groups[i];
 			for(var bi = 0; bi < rg.blocks.length; ++bi){
 				var block_measures = rg.blocks[bi];
@@ -3761,6 +3762,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 		var page_cont = [];
 		for(var i = 0; i < y_stacks.length; ++i)
 		{
+			console.log("sum_y : " + sum_y + " / stak height : " + y_stacks[i].height + " vs " + (param.paper_height - param.y_offset));
 			if(sum_y + y_stacks[i].height <= (param.paper_height - param.y_offset)){
 				sum_y += y_stacks[i].height;
 				page_cont.push(y_stacks[i]);

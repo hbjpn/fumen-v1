@@ -3334,6 +3334,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			body_elems.elems.forEach(function(es, ei){
 				es.e.renderprop.x = x;
 				x += (es.width * group_scaling);
+				console.log("x updated : " + x + " / " + (es.width) + " : " + group_scaling);
 			});
 
 			body_elems.elems.forEach(function(es, ei){
@@ -3416,7 +3417,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 					rs_area_svg_groups.push(coda);
 				}else{
 					var coda = draw_coda(paper, x, y_body_or_rs_base, "rb", e);
-					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_body_or_rs_base, "To", 15, "rb").attr(param.repeat_mark_font);
+					text = raphaelText(paper, x - coda.getBBox().width - 5, y_body_or_rs_base, "To", 15, "rb").attr(param.repeat_mark_font);
 					rs_area_svg_groups.push(coda);
 					rs_area_svg_groups.push(text);
 				}
@@ -3912,9 +3913,17 @@ function draw_coda(paper, x, y, align, coda)
 {
 	// aligh=(l|c|r)(b|m|t)
 	var group = paper.set();
-	group.push( raphaelText(paper, x, y, '\ue800', 18, align, "smart_music_symbol") );
-	if(coda.number !== null)
-		group.push( raphaelText(paper, x + group.getBBox().width, y + group.getBBox().height, coda.number, 18, "lb") );
+	if(align[0] == 'r'){
+		if(coda.number !== null)
+			group.push( raphaelText(paper, x, y, coda.number, 18, align) );
+		group.push( raphaelText(paper, x - (coda.number !== null ? group.getBBox().width : 0), y, '\ue800', 18, align, "smart_music_symbol") );
+	}else if(align[0] == 'l'){
+		group.push( raphaelText(paper, x, y, '\ue800', 18, align, "smart_music_symbol") );
+		if(coda.number !== null)
+			group.push( raphaelText(paper, x + group.getBBox().width, y, coda.number, 18, align) );
+	}else{
+		throw "NOT SUPPORTED";
+	}
 	return group;
 }
 

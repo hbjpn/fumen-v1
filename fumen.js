@@ -2588,9 +2588,9 @@ function render_chord(chord, transpose, half_type, paper, x, y_body_base,
 
 function raphaelSlash(paper, group, x, y, d, numdot, _5lines_intv)
 {
-	var rsgw = _5lines_intv * 2;
-	var rsgh = 10;
-	var rsh = 3;
+	var rsgw = 8;
+	var rsgh = _5lines_intv * 2;
+	var rsh = 4;
 	var path = svgPath( [[x,y+rsgh/2-rsh],[x+rsgw,y-rsgh/2],[x+rsgw,y-rsgh/2+rsh],[x,y+rsgh/2]], true);
 	var obj = null;
 	//var group = paper.set();

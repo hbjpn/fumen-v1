@@ -652,11 +652,6 @@ function Chord(chord_str)
 
 	this.is_valid_chord = true;
 
-	/*this.length = WHOLE_NOTE_LENGTH;
-	this.length_s = null;
-	this.tie = false;
-	*/
-
 	this.renderprop = {};
 
 	this.exceptinal_comment = null;
@@ -3131,17 +3126,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	var y_mu_area_base = y_base; // top of mu area(segno, coda, etc..)
 	var y_body_base = y_base + (mu_area_detected ? param.mu_area_height+param.below_mu_area_margin : 0); // top of chord area
-	//var y_rs_area_base = y_body_base + (rs_area_detected ? (param.row_height+param.above_rs_area_margin) : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
-
-	/*var y_ml_area_base = y_body_base + param.row_height
-			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
-			+ param.above_ml_area_margin;
-
-	var y_next_base = y_body_base + param.row_height
-			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
-			+ (ml_area_detected ? lyric_rows * param.ml_row_height + param.above_ml_area_margin : 0)
-			+ param.row_margin;
-			*/
 
 	var y_rs_area_base = y_body_base +
 		+ param.row_height
@@ -3292,7 +3276,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		var chord_space_list = []; // for chord and rest
 
 		var local_x = 0;
-		var base_space = 40;
+		var base_space = 20;
 
 		elements.body.forEach(function(e){
 			all_has_length &= (e.nglist !== null );
@@ -3321,7 +3305,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				var this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
 				chord_space = Math.floor(base_space / sum_length*this_chord_len);
 			}else{
-				chord_space = Math.floor(base_space / 1 /*num_chord_in_a_measure*/);
+				chord_space = Math.floor(base_space / 1 ); //elements.body.length /*num_chord_in_a_measure*/);
 			}
 			var width = ( (chord_space + guessRSorNoteWidth(e)) * x_global_scale * m.body_scaling);
 			groupedBodyElems[gbei].groupedChordsLen += width;
@@ -3384,89 +3368,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				}
 			});
 		});
-
-/*
-		for(var ei = 0; ei < elements.body.length; ++ei)
-		{
-			var e = elements.body[ei];
-
-			var chord_space = 0;
-			if(all_has_length){
-				var this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
-				chord_space = Math.floor(base_space*x_global_scale / sum_length*this_chord_len);
-			}else
-				chord_space = Math.floor(base_space*x_global_scale / num_chord_in_a_measure);
-
-			if(e instanceof Chord){
-				var cr = render_chord(e, transpose, half_type, paper, x, y_body_base,
-						param, draw, C7_width, chord_space, x_global_scale, m.body_scaling, theme);
-				x += cr.width * x_global_scale * m.body_scaling + chord_space * m.body_scaling; // modoru
-				//x += text.getBBox().width * x_global_scale * body_scaling;
-				//x += (chord_space*body_scaling);
-				//x = cr.x;
-				if(!isFinite(x)){
-					console.log("Illegal calculation of x is detected");
-				}
-				if(e.exceptinal_comment !== null){
-					if(draw)
-						var g = raphaelText(paper, x, y_body_base,
-							e.exceptinal_comment.comment, 15, "lb");
-				}
-				if(e.lyric !== null){
-					if(draw){
-						var llist = e.lyric.lyric.split("/");
-						for(var li=0; li < llist.length; ++li){
-							var g = raphaelText(paper, x, y_ml_area_base + li*param.ml_row_height,
-								llist[li], 10, "lt");
-						}
-					}
-				}
-				// If chord is continued from the previous chord with tie, or
-				// more than 1 adjacent valid chords are the same,
-				// the chord(s) except the first one are not drawn. This is not applied for invalid chord.
-				if(g_prev_chord_has_tie || (e.is_valid_chord && (chord_name_str == e.chord_name_str))){
-					cr.group.remove(); // Not draw chord symbol
-				}
-				g_prev_chord_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
-				chord_name_str = e.chord_name_str;
-			}else if(e instanceof Rest){
-				var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
-				var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14};
-				var dot_xoffsets = {1:16, 2:16, 4:10, 8:12, 16:14, 32:16, 64:18};
-				//var rd = parseInt(e.length_s);
-				//var rrm = e.length_s.match(/([0-9]+)(\.*)/);
-				var rd = e.nglist[0].lengthIndicator.base; //parseInt(rrm[1]);
-				var numdot = e.nglist[0].lengthIndicator.numdot; //rm[2].length;
-				var rg = paper.set();
-				var oy = yoffsets[rd];
-				var fs = 14;
-				if(rd <= 4){
-					var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2 + oy, cmap[rd], fs, "lc", "realbook_music_symbol");
-					rg.push(text);
-				}else{
-					var nKasane = myLog2(rd) - 2;
-					var rdx = 2;
-					var rdy = -7;
-					for(var k = 0; k < nKasane; ++k){
-						var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "realbook_music_symbol");
-						rg.push(text);
-					}
-				}
-				// dots
-				for(var di = 0; di < numdot; ++di){
-					rg.push( paper.circle(x + dot_xoffsets[rd] + di*5, y_rs_area_base + param.row_height/2 - _5lines_intv/2,1).attr({'fill':'black'}) );
-				}
-				//x += rg.getBBox().width * m.body_scaling;
-				x += C7_width * x_global_scale * m.body_scaling;
-				x += (chord_space*m.body_scaling);
-				e.renderprop.x = x;
-				if(!draw) rg.remove();
-
-			}else{
-				throw "ERROR";
-			}
-		}
-		*/
 
 		if(elements.body.length == 0)
 		{
@@ -3991,36 +3892,6 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 
 function draw_segno(paper, x, y, segno)
 {
-	/*
-	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619');
-	var path3001 = rsr.path("m 7.45119,0.00462507 c -2.62006,-0.12965 -4.89531,2.48917003 -4.5203,5.06077003 0.30852,2.3265 2.16735,4.12974 4.20376,5.1011599 1.65879,0.86938 3.71404,0.71264 5.22694,1.90481 1.39044,1.02552 1.92776,3.15917 0.89399,4.61515 -0.59006,0.8633 -1.60565,1.57525 -2.69669,1.40546 -0.51026,-0.79781 -0.0548,-1.84761 -0.5841,-2.65244 -0.50017,-0.97685 -1.7314,-1.52668 -2.77051,-1.09339 -1.09273,0.36861 -1.55201,1.78786 -0.96315,2.76184 0.95747,1.95409 3.44952,2.65453 5.45383,2.15374 2.52866,-0.60348 4.08162,-3.66205 3.0424,-6.05383 -0.87324,-2.27646 -3.05164,-3.8349199 -5.33435,-4.4943599 -1.63211,-0.39445 -3.53265,-0.67749 -4.56541,-2.16526 -0.96216,-1.25884 -0.91035,-3.20529 0.26205,-4.31632 0.58015,-0.61405 1.43392,-1.05559 2.29618,-0.91468 0.51027,0.79781 0.0548,1.84762 0.5841,2.65244 0.50017,0.97686 1.7314,1.52668 2.77051,1.09339 1.0378,-0.35178 1.53161,-1.67674 1.0195,-2.63799 C 11.07123,0.77410507 9.16303,-0.05833493 7.45119,0.00462507 z"); path3001.attr({id: 'path3001',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '50',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3001'); var path3807 = rsr.path("m 15.97079,8.1489251 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3807.attr({id: 'path3807',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3807'); var path3822 = rsr.path("m 3.38842,11.049785 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3822.attr({id: 'path3822',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3822'); var path3803 = rsr.path("M 15.69138,2.8164551 C 10.46092,7.2657851 5.23046,11.715125 0,16.164455 c 0.68845,-0.002 1.37691,-0.003 2.06536,-0.005 5.21598,-4.44988 10.43195,-8.8997599 15.64793,-13.3496399 -0.67397,0.002 -1.34794,0.004 -2.02191,0.007 z"); path3803.attr({id: 'path3803',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '49.9',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3803'); var rsrGroups = [];
-	// Need to note raphael set is not g tag in svg element. Then need to make 2 groups here to apply different tranform.
-	var group1 = rsr.set();
-
-	group1.push(path3001, path3807, path3822, path3803);
-	group1.transform("t"+x +","+(y-1)+" s0.9");
-
-	var h = group1.getBBox().height;
-
-	var group2 = rsr.set();
-	var group2_valid = false;
-	if(segno.number !== null){
-		group2.push( raphaelText(paper, group1.getBBox().width, h + 5, segno.number, 20, "lb"));
-		group2_valid = true;
-	}
-
-	if(segno.opt !== null){
-		group2.push( raphaelText(paper, group1.getBBox().width + (group2_valid ? group2.getBBox().width : 0), h + 3, "("+segno.opt+")", 16, "lb"));
-		group2_valid = true;
-	}
-	// Empty set in the super set will return invalid getBBox(), then need to judge if group2 is valid set ... X(
-	if(group2_valid){
-		group2.transform("t"+x +","+(y-1));
-		return rsr.set([group1,group2]);
-	}else{
-		return group1;
-	}
-	*/
 	var lx = x;
 	var group = paper.set();
 	group.push( raphaelText(paper, x, y, '\ue801', 18, "lt", "smart_music_symbol") );
@@ -4040,24 +3911,6 @@ function draw_segno(paper, x, y, segno)
 function draw_coda(paper, x, y, align, coda)
 {
 	// aligh=(l|c|r)(b|m|t)
-	/*
-	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619');
-	var path3878 = rsr.path("m 7.36,1.9518304 c -3.1472,0 -5.51238,3.23098 -5.51238,6.97709 0,3.7461196 2.36518,6.9770896 5.51238,6.9770896 3.1472,0 5.51238,-3.23097 5.51238,-6.9770896 0,-3.74611 -2.36518,-6.97709 -5.51238,-6.97709 z m 0,0.84817 c 1.97338,0 3.75892,3.18901 3.75892,6.12892 0,2.9399196 -1.78554,6.1289296 -3.75892,6.1289296 -1.97338,0 -3.75892,-3.18901 -3.75892,-6.1289296 0,-2.93991 1.78554,-6.12892 3.75892,-6.12892 z"); path3878.attr({id: 'path3878',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '72.4',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3878'); var path4413 = rsr.path("m 7.2,3.814697e-7 -3.6,0 0,0.7999999985303 3.2,0.40000002 0,7.6 1.2,0 0,-7.6 3.2,-0.40000002 0,-0.7999999985303 z"); path4413.attr({id: 'path4413',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4413'); var path4415 = rsr.path("m 7.6,17.6 3.6,0 0,-0.8 -3.2,-0.4 0,-7.5999996 -1.2,0 0,7.5999996 -3.2,0.4 0,0.8 z"); path4415.attr({id: 'path4415',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4415'); var path4417 = rsr.path("m 14.8,8.8000004 0,-3.6 -0.8,0 -0.4,3.2 -7.6,0 0,1.2 7.6,0 L 14,12.8 l 0.8,0 z"); path4417.attr({id: 'path4417',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4417'); var path4419 = rsr.path("M 0,9.2000004 0,12.8 l 0.8,0 0.4,-3.1999996 7.6,0 0,-1.2 -7.6,0 -0.4,-3.2 -0.8,0 z"); path4419.attr({id: 'path4419',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4419'); var rsrGroups = [];
-	var group = rsr.set();
-	group.push(path3878, path4413, path4415, path4417, path4419);
-	if(coda.number !== null)
-		group.push( raphaelText(paper, group.getBBox().width, group.getBBox().height + 4, coda.number, 20, "lb"));
-
-	if(align !== undefined && align !== null){
-		//console.log(group.getBBox());
-		var xc = align[0]=='l'?0.0:(align[0]=='c'?0.5:1.0);
-		x -= xc * group.getBBox().width ;
-		var yc = align[1]=='t'?0.0:(align[1]=='m'?0.5:1.0);
-		y -= yc * group.getBBox().height;
-	}
-	group.transform("t"+x+","+(y));
-	return group;
-	*/
 	var group = paper.set();
 	group.push( raphaelText(paper, x, y, '\ue800', 18, align, "smart_music_symbol") );
 	if(coda.number !== null)

@@ -3091,8 +3091,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	var ml_area_detected = false; // Measure Lower Area ( Blow the chord & rhythm slash area)
 	var lyric_rows = 0;
 
-	var rest_or_long_rests_detected = false;
-
 	//var draw_5line = false;
 	if(staff == "ON"){
 		rs_area_detected = true;
@@ -3113,10 +3111,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			}else if( e instanceof Lyric){
 				ml_area_detected = true;
 				lyric_rows = Math.max(e.lyric.split("/").length, lyric_rows);
-			}
-
-			if( e instanceof Rest || e instanceof LongRestIndicator ){
-				rest_or_long_rests_detected = true;
 			}
 		}
 	}
@@ -3159,6 +3153,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	// For each measure in this row
 	for(var ml = 0; ml < row_elements_list.length; ++ml){
+
 		// measure object
 		var m = row_elements_list[ml];
 
@@ -3172,6 +3167,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		// Draw sub header field ( Repeat signs )
 		var m_mu_area_detected = false;
 		var m_ml_area_detected = false;
+		var rest_or_long_rests_detected = false;
+
 		for(var ei = 0; ei < elements.header.length; ++ei)
 		{
 			var e = elements.header[ei];
@@ -3281,6 +3278,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		elements.body.forEach(function(e){
 			all_has_length &= (e.nglist !== null );
 			if(all_has_length) sum_length += e.nglist[0].lengthIndicator.length;
+			rest_or_long_rests_detected |= (e instanceof Rest);
 		});
 
 		var tmpl = {elems:[],groupedChordsLen:0};
@@ -3472,6 +3470,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				if(draw) lriGroup.push( raphaelText(paper, (sx+fx)/2, y_body_or_rs_base, e.longrestlen, 14, "cm","realbook_music_symbol") );
 
 				if(draw) rs_area_svg_groups.push(lriGroup);
+
+				rest_or_long_rests_detected |= true;
 			}else{
 				throw "Unkown measure wide instance detected";
 			}

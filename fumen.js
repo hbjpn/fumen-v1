@@ -3048,7 +3048,7 @@ function new_row_yinfo()
 	return rowyinfo;
 }
 
-function render_rest(e, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, param)
+function render_rest(e, paper, draw, x, y_body_or_rs_base, C7_width, _5lines_intv, param)
 {
 	var cmap = {1:'\ue600', 2: '\ue601', 4:'\ue602', 8:'\ue603', 16: '\ue603', 32:'\ue603'};
 	var yoffsets = {1:1, 2:-2, 4:0, 8:0, 16:7, 32:7, 64:14};
@@ -3061,20 +3061,20 @@ function render_rest(e, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, 
 	var oy = yoffsets[rd];
 	var fs = 14;
 	if(rd <= 4){
-		var text = raphaelText(paper, x, y_rs_area_base + param.row_height/2 + oy, cmap[rd], fs, "lc", "realbook_music_symbol");
+		var text = raphaelText(paper, x, y_body_or_rs_base + param.row_height/2 + oy, cmap[rd], fs, "lc", "realbook_music_symbol");
 		rg.push(text);
 	}else{
 		var nKasane = myLog2(rd) - 2;
 		var rdx = 2;
 		var rdy = -7;
 		for(var k = 0; k < nKasane; ++k){
-			var text = raphaelText(paper, x + k*rdx, y_rs_area_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "realbook_music_symbol");
+			var text = raphaelText(paper, x + k*rdx, y_body_or_rs_base + param.row_height/2 + k*rdy + oy, '\ue603', fs, "lc", "realbook_music_symbol");
 			rg.push(text);
 		}
 	}
 	// dots
 	for(var di = 0; di < numdot; ++di){
-		rg.push( paper.circle(x + dot_xoffsets[rd] + di*5, y_rs_area_base + param.row_height/2 - _5lines_intv/2,1).attr({'fill':'black'}) );
+		rg.push( paper.circle(x + dot_xoffsets[rd] + di*5, y_body_or_rs_base + param.row_height/2 - _5lines_intv/2,1).attr({'fill':'black'}) );
 	}
 
 	if(!draw) rg.remove();
@@ -3131,8 +3131,9 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	var y_mu_area_base = y_base; // top of mu area(segno, coda, etc..)
 	var y_body_base = y_base + (mu_area_detected ? param.mu_area_height+param.below_mu_area_margin : 0); // top of chord area
-	var y_rs_area_base = y_body_base + (rs_area_detected ? (param.row_height+param.above_rs_area_margin) : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
-	var y_ml_area_base = y_body_base + param.row_height
+	//var y_rs_area_base = y_body_base + (rs_area_detected ? (param.row_height+param.above_rs_area_margin) : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
+
+	/*var y_ml_area_base = y_body_base + param.row_height
 			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
 			+ param.above_ml_area_margin;
 
@@ -3140,11 +3141,27 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			+ (rs_area_detected ? param.rs_area_height + param.above_rs_area_margin : 0)
 			+ (ml_area_detected ? lyric_rows * param.ml_row_height + param.above_ml_area_margin : 0)
 			+ param.row_margin;
+			*/
+
+	var y_rs_area_base = y_body_base +
+		+ param.row_height
+		+ (rs_area_detected ? param.above_rs_area_margin : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
+
+	var y_ml_area_base = y_rs_area_base
+		+ (rs_area_detected ? param.rs_area_height : 0 )
+		+ (ml_area_detected ? param.above_ml_area_margin : 0 );
+
+	var y_next_base = y_ml_area_base
+		+ (ml_area_detected ? lyric_rows * param.ml_row_height : 0 )
+		+ param.row_margin;
+
+	var y_body_or_rs_base = rs_area_detected ? y_rs_area_base : y_body_base;
+
 	if(false && draw){
 	    var lines = [y_base, y_mu_area_base, y_body_base, y_rs_area_base, y_ml_area_base, y_next_base];
 	    var colors = ["black","red","blue","green","orange","pink"];
 	    for(var ii=0; ii<lines.length; ++ii)
-    		paper.path(svgLine(0+ii*20, lines[ii], 100+ii*20, lines[ii])).attr({"stroke-width":"1","stroke":colors[ii]});
+    		paper.path(svgLine(0+ii*30, lines[ii], 20+ii*30, lines[ii])).attr({"stroke-width":"1","stroke":colors[ii]});
 	}
 
 	var measure_height = y_next_base - y_base;
@@ -3153,6 +3170,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	var first_meas_start_x = x;
 	var last_meas_end_x = x;
 
+	var body_area_svg_groups = [];
 	var rs_area_svg_groups = [];
 
 	// For each measure in this row
@@ -3216,8 +3234,8 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			{
 				var pm = ml == 0 ? prev_measure : row_elements_list[ml-1];
 				var ne = pm ? pm.elements[ pm.elements.length - 1] : null;
-				var r = draw_boundary('begin', ne, e, m.new_line, paper, x, y_rs_area_base, param, draw);
-				m.renderprop.y = y_rs_area_base;
+				var r = draw_boundary('begin', ne, e, m.new_line, paper, x, y_body_or_rs_base, param, draw);
+				m.renderprop.y = y_body_or_rs_base;
 				m.renderprop.sx = x;
 				m.renderprop.paper = paper;
 				x = r.x;
@@ -3234,15 +3252,18 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				x += 4;
 				var hlw = 0;
 				var lx = x;
-				var textn = raphaelText(paper, lx, y_rs_area_base,                e.numer, 12, "lt", "realbook_music_symbol");
+				var timeGroup = paper.set();
+				var textn = raphaelText(paper, lx, y_body_or_rs_base,                e.numer, 12, "lt", "realbook_music_symbol");
 				hlw = textn.getBBox().width;
-				var textd = raphaelText(paper, lx, y_rs_area_base + param.row_height/2, e.denom, 12, "lt", "realbook_music_symbol");
+				var textd = raphaelText(paper, lx, y_body_or_rs_base + param.row_height/2, e.denom, 12, "lt", "realbook_music_symbol");
 				hlw = Math.max(hlw, textd.getBBox().width);
 				textn.attr({'x':textn.attr('x') + (hlw - textn.getBBox().width)/2});
 				textd.attr({'x':textd.attr('x') + (hlw - textd.getBBox().width)/2});
+				timeGroup.push(textn, textd);
 				var ly = y_body_base + param.row_height/2;
-				if(draw && (!rs_area_detected)) paper.path(svgLine(lx, ly, lx+hlw, ly)).attr({"stroke-width":"1"});
+				if(draw && (!rs_area_detected)) timeGroup.push( paper.path(svgLine(lx, ly, lx+hlw, ly)).attr({"stroke-width":"1"}) );
 				//console.log("hlw = " + hlw);
+				rs_area_svg_groups.push(timeGroup);
 				x += hlw;
 			}
 		}
@@ -3271,7 +3292,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		var chord_space_list = []; // for chord and rest
 
 		var local_x = 0;
-		var base_space = 10;
+		var base_space = 40;
 
 		elements.body.forEach(function(e){
 			all_has_length &= (e.nglist !== null );
@@ -3318,7 +3339,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 						param, draw, C7_width, theme);
 				chord_symbol_width = (cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 			}else if(e0 instanceof Rest){
-				var rr = render_rest(e0, paper, draw, x, y_rs_area_base, C7_width, _5lines_intv, param);
+				var rr = render_rest(e0, paper, draw, x, y_body_or_rs_base, C7_width, _5lines_intv, param);
 				chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 
 				if(draw) rs_area_svg_groups.push(rr.group);
@@ -3354,7 +3375,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				}else if(e instanceof Rest){
 					if(ei == 0) return; // skip as already drawn
 
-					var rr = render_rest(e0, paper, draw, e.renderprop.x, y_rs_area_base, C7_width, _5lines_intv, param);
+					var rr = render_rest(e0, paper, draw, e.renderprop.x, y_body_or_rs_base, C7_width, _5lines_intv, param);
 					if(!draw) rr.group.remove();
 					else rs_area_svg_groups.push(rr.group);
 
@@ -3472,29 +3493,36 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 			{
 				var nm = (ml == row_elements_list.length-1) ? next_measure : row_elements_list[ml+1];
 				var ne = nm ? nm.elements[0] : null;
-				var r = draw_boundary('end', e, ne, nm ? nm.new_line : false, paper, x, y_rs_area_base, param, draw);
+				var r = draw_boundary('end', e, ne, nm ? nm.new_line : false, paper, x, y_body_or_rs_base, param, draw);
 				m.renderprop.ex = x;
 				x = r.x;
 				if(r.group) rs_area_svg_groups.push(r.group);
 			}else if(e instanceof DaCapo){
-				text = raphaelText(paper, x, y_rs_area_base　- 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_body_or_rs_base　- 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
+				rs_area_svg_groups.push(text);
 			}else if(e instanceof DalSegno){
-				text = raphaelText(paper, x, y_rs_area_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_body_or_rs_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
+				rs_area_svg_groups.push(text);
 			}else if(e instanceof ToCoda){
 				if(rs_area_detected){
-					var text = raphaelText(paper, x, y_rs_area_base, "To", 15, "lb").attr(param.repeat_mark_font);
+					var text = raphaelText(paper, x, y_body_or_rs_base, "To", 15, "lb").attr(param.repeat_mark_font);
 					x += (text.getBBox().width + 5);
-					var coda = draw_coda(paper, x, y_rs_area_base, "lb", e);
+					rs_area_svg_groups.push(text);
+					var coda = draw_coda(paper, x, y_body_or_rs_base, "lb", e);
 					x += coda.getBBox().width;
+					rs_area_svg_groups.push(coda);
 				}else{
-					var coda = draw_coda(paper, x, y_rs_area_base, "rb", e);
-					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_rs_area_base, "To", 15, "rb").attr(param.repeat_mark_font);
+					var coda = draw_coda(paper, x, y_body_or_rs_base, "rb", e);
+					text = raphaelText(paper, x - coda.getBBox().width*1.5, y_body_or_rs_base, "To", 15, "rb").attr(param.repeat_mark_font);
+					rs_area_svg_groups.push(coda);
+					rs_area_svg_groups.push(text);
 				}
 			}else if(e instanceof Fine){
-				text = raphaelText(paper, x, y_rs_area_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_body_or_rs_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
+				rs_area_svg_groups.push(text);
 			}else{
 				throw "ERROR";
 			}
@@ -3530,13 +3558,18 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 				var lx = sx + lrmargin;
 				var rx = fx - lrmargin;
-				if(draw) paper.path(svgLine(lx, y_rs_area_base + param.row_height/2,
-						rx, y_rs_area_base + param.row_height/2)).attr({"stroke-width":"7"});
-				if(draw) paper.path(svgLine(lx, y_rs_area_base + rh * vlmargin,
-						lx, y_rs_area_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
-				if(draw) paper.path(svgLine(rx, y_rs_area_base + rh * vlmargin,
-						rx, y_rs_area_base + rh - rh * vlmargin)).attr({"stroke-width":"1"});
-				if(draw) raphaelText(paper, (sx+fx)/2, y_rs_area_base, e.longrestlen, 14, "cm","realbook_music_symbol");
+
+				var lriGroup = paper.set();
+
+				if(draw) lriGroup.push( paper.path(svgLine(lx, y_body_or_rs_base + param.row_height/2,
+						rx, y_body_or_rs_base + param.row_height/2)).attr({"stroke-width":"7"}) );
+				if(draw) lriGroup.push( paper.path(svgLine(lx, y_body_or_rs_base + rh * vlmargin,
+						lx, y_body_or_rs_base + rh - rh * vlmargin)).attr({"stroke-width":"1"}) );
+				if(draw) lriGroup.push( paper.path(svgLine(rx, y_body_or_rs_base + rh * vlmargin,
+						rx, y_body_or_rs_base + rh - rh * vlmargin)).attr({"stroke-width":"1"}) );
+				if(draw) lriGroup.push( raphaelText(paper, (sx+fx)/2, y_body_or_rs_base, e.longrestlen, 14, "cm","realbook_music_symbol") );
+
+				if(draw) rs_area_svg_groups.push(lriGroup);
 			}else{
 				throw "Unkown measure wide instance detected";
 			}
@@ -3579,16 +3612,18 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 	}
 
 	// check vertical overlaps
-	var rs_min_y = 100000;
-	var rs_max_y = 0;
-	rs_area_svg_groups.forEach(function(g){
-		rs_min_y = Math.min( g.getBBox().y, rs_min_y );
-		rs_max_y = Math.max( g.getBBox().y2, rs_max_y );
-	});
-	if(rs_min_y < y_rs_area_base){
+	if(false){
+		var rs_min_y = 100000;
+		var rs_max_y = 0;
 		rs_area_svg_groups.forEach(function(g){
-			g.transform("t"+0 +","+(y_rs_area_base - rs_min_y));
+			rs_min_y = Math.min( g.getBBox().y, rs_min_y );
+			rs_max_y = Math.max( g.getBBox().y2, rs_max_y );
 		});
+		if(rs_min_y < y_rs_area_base){
+			rs_area_svg_groups.forEach(function(g){
+				g.transform("t"+0 +","+(y_rs_area_base - rs_min_y));
+			});
+		}
 	}
 
 	// max.apply with 0 length array will generate -inf value, then check if measure_heights has at least one element
@@ -3719,7 +3754,7 @@ function Initialize()
 	for(var i=0; i < FONT_FAMILIES.length; ++i){
 		var text = raphaelText(paper, 100, 100, "ABCDEFG#b123456789dsMm", 16, "lt",FONT_FAMILIES[i]);
 	}
-	raphaelText(paper, 100, 120, "b#\ue700\ue701\ue702\ue710\ue711\ue901", 16, "lt",'smart_music_symbol');
+	raphaelText(paper, 100, 120, "b#\ue700\ue701\ue702\ue710\ue711\ue900\ue800\ue801", 16, "lt",'smart_music_symbol');
 	removeDammyPaper();
 }
 
@@ -3956,6 +3991,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 
 function draw_segno(paper, x, y, segno)
 {
+	/*
 	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619');
 	var path3001 = rsr.path("m 7.45119,0.00462507 c -2.62006,-0.12965 -4.89531,2.48917003 -4.5203,5.06077003 0.30852,2.3265 2.16735,4.12974 4.20376,5.1011599 1.65879,0.86938 3.71404,0.71264 5.22694,1.90481 1.39044,1.02552 1.92776,3.15917 0.89399,4.61515 -0.59006,0.8633 -1.60565,1.57525 -2.69669,1.40546 -0.51026,-0.79781 -0.0548,-1.84761 -0.5841,-2.65244 -0.50017,-0.97685 -1.7314,-1.52668 -2.77051,-1.09339 -1.09273,0.36861 -1.55201,1.78786 -0.96315,2.76184 0.95747,1.95409 3.44952,2.65453 5.45383,2.15374 2.52866,-0.60348 4.08162,-3.66205 3.0424,-6.05383 -0.87324,-2.27646 -3.05164,-3.8349199 -5.33435,-4.4943599 -1.63211,-0.39445 -3.53265,-0.67749 -4.56541,-2.16526 -0.96216,-1.25884 -0.91035,-3.20529 0.26205,-4.31632 0.58015,-0.61405 1.43392,-1.05559 2.29618,-0.91468 0.51027,0.79781 0.0548,1.84762 0.5841,2.65244 0.50017,0.97686 1.7314,1.52668 2.77051,1.09339 1.0378,-0.35178 1.53161,-1.67674 1.0195,-2.63799 C 11.07123,0.77410507 9.16303,-0.05833493 7.45119,0.00462507 z"); path3001.attr({id: 'path3001',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '50',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3001'); var path3807 = rsr.path("m 15.97079,8.1489251 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3807.attr({id: 'path3807',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3807'); var path3822 = rsr.path("m 3.38842,11.049785 c 0.005,0.3706 -0.23305,0.72802 -0.57561,0.8684 -0.33653,0.14657 -0.75456,0.0707 -1.01709,-0.18618 -0.26603,-0.24718 -0.3631,-0.65442 -0.23893,-0.99541 0.12006,-0.35345 0.46727,-0.61404 0.84067,-0.62804 0.36299,-0.0235 0.72582,0.18693 0.88786,0.51217 0.0679,0.13213 0.10333,0.28054 0.1031,0.42906 z"); path3822.attr({id: 'path3822',fill: '#000000',stroke: '#000000',"stroke-width": '0',"stroke-linecap": 'round',"stroke-miterlimit": '4',"stroke-opacity": '1',"stroke-dasharray": 'none'}).data('id', 'path3822'); var path3803 = rsr.path("M 15.69138,2.8164551 C 10.46092,7.2657851 5.23046,11.715125 0,16.164455 c 0.68845,-0.002 1.37691,-0.003 2.06536,-0.005 5.21598,-4.44988 10.43195,-8.8997599 15.64793,-13.3496399 -0.67397,0.002 -1.34794,0.004 -2.02191,0.007 z"); path3803.attr({id: 'path3803',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '49.9',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3803'); var rsrGroups = [];
 	// Need to note raphael set is not g tag in svg element. Then need to make 2 groups here to apply different tranform.
@@ -3984,11 +4020,27 @@ function draw_segno(paper, x, y, segno)
 	}else{
 		return group1;
 	}
+	*/
+	var lx = x;
+	var group = paper.set();
+	group.push( raphaelText(paper, x, y, '\ue801', 18, "lt", "smart_music_symbol") );
+	lx = x + group.getBBox().width;
+	if(segno.number !== null){
+		group.push( raphaelText(paper, lx, y + group.getBBox().height, segno.number, 18, "lb") );
+		lx = x + group.getBBox().width;
+	}
+	if(segno.opt !== null){
+		group.push( raphaelText(paper, lx, y + group.getBBox().height, "("+segno.opt+")", 16, "lb"));
+		lx = x + group.getBBox().width;
+	}
+
+	return group;
 }
 
 function draw_coda(paper, x, y, align, coda)
 {
 	// aligh=(l|c|r)(b|m|t)
+	/*
 	var rsr = paper; //Raphael('rsr', '708.53131', '776.59619');
 	var path3878 = rsr.path("m 7.36,1.9518304 c -3.1472,0 -5.51238,3.23098 -5.51238,6.97709 0,3.7461196 2.36518,6.9770896 5.51238,6.9770896 3.1472,0 5.51238,-3.23097 5.51238,-6.9770896 0,-3.74611 -2.36518,-6.97709 -5.51238,-6.97709 z m 0,0.84817 c 1.97338,0 3.75892,3.18901 3.75892,6.12892 0,2.9399196 -1.78554,6.1289296 -3.75892,6.1289296 -1.97338,0 -3.75892,-3.18901 -3.75892,-6.1289296 0,-2.93991 1.78554,-6.12892 3.75892,-6.12892 z"); path3878.attr({id: 'path3878',"font-size": 'medium',"font-style": 'normal',"font-variant": 'normal',"font-weight": 'normal',"font-stretch": 'normal',"text-indent": '0',"text-align": 'start',"text-decoration": 'none',"line-height": 'normal',"letter-spacing": 'normal',"word-spacing": 'normal',"text-transform": 'none',direction: 'ltr',"block-progression": 'tb',"writing-mode": 'lr-tb',"text-anchor": 'start',"baseline-shift": 'baseline',color: '#000000',fill: '#000000',"fill-opacity": '1',stroke: 'none','stroke-width':'1','stroke-opacity':'1',"stroke-width": '72.4',marker: 'none',visibility: 'visible',display: 'inline',overflow: 'visible',"enable-background": 'accumulate',"font-family": 'Sans',"-inkscape-font-specification": 'Sans'}).data('id', 'path3878'); var path4413 = rsr.path("m 7.2,3.814697e-7 -3.6,0 0,0.7999999985303 3.2,0.40000002 0,7.6 1.2,0 0,-7.6 3.2,-0.40000002 0,-0.7999999985303 z"); path4413.attr({id: 'path4413',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4413'); var path4415 = rsr.path("m 7.6,17.6 3.6,0 0,-0.8 -3.2,-0.4 0,-7.5999996 -1.2,0 0,7.5999996 -3.2,0.4 0,0.8 z"); path4415.attr({id: 'path4415',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4415'); var path4417 = rsr.path("m 14.8,8.8000004 0,-3.6 -0.8,0 -0.4,3.2 -7.6,0 0,1.2 7.6,0 L 14,12.8 l 0.8,0 z"); path4417.attr({id: 'path4417',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4417'); var path4419 = rsr.path("M 0,9.2000004 0,12.8 l 0.8,0 0.4,-3.1999996 7.6,0 0,-1.2 -7.6,0 -0.4,-3.2 -0.8,0 z"); path4419.attr({id: 'path4419',fill: '#000000',stroke: 'none','stroke-width':'1','stroke-opacity':'1'}).data('id', 'path4419'); var rsrGroups = [];
 	var group = rsr.set();
@@ -4004,6 +4056,12 @@ function draw_coda(paper, x, y, align, coda)
 		y -= yc * group.getBBox().height;
 	}
 	group.transform("t"+x+","+(y));
+	return group;
+	*/
+	var group = paper.set();
+	group.push( raphaelText(paper, x, y, '\ue800', 18, align, "smart_music_symbol") );
+	if(coda.number !== null)
+		group.push( raphaelText(paper, x + group.getBBox().width, y + group.getBBox().height, coda.number, 18, "lb") );
 	return group;
 }
 

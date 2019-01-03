@@ -3101,10 +3101,16 @@ function render_rest(e, paper, draw, x, y_body_or_rs_base, C7_width, _5lines_int
 	return {group:rg, width:C7_width};
 }
 
-function render_measure_row(x, paper, x_global_scale, transpose, half_type,
-		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw, staff, theme,
+function render_measure_row(x, paper, macros,
+		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw, 
 		first_block_first_row, inner_reharsal_mark)
 {
+	var x_global_scale = macros.x_global_scale;
+	var transpose = macros.transpose;
+	var half_type = macros.half_type;
+	var staff = macros.staff;
+	var theme = macros.theme;
+
 	/* Reference reserved width for empty measures or chord symbol without base names*/
 	var text = raphaelText(paper, 0, 0,"C7", 16, "lc", "realbook_music_symbol");
 	var C7_width = text.getBBox().width;
@@ -3147,7 +3153,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	var y_rs_area_base = y_body_base +
 		+ param.row_height
-		+ (rs_area_detected ? param.above_rs_area_margin : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
+		+ (rs_area_detected ? param.above_rs_area_margin * macros.r_above_rs_area_margin : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
 
 	var y_ml_area_base = y_rs_area_base
 		+ (rs_area_detected ? param.rs_area_height : 0 )
@@ -3155,7 +3161,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 	var y_next_base = y_ml_area_base
 		+ (ml_area_detected ? lyric_rows * param.ml_row_height : 0 )
-		+ param.row_margin;
+		+ param.row_margin * macros.r_row_margin;
 
 	var y_body_or_rs_base = rs_area_detected ? y_rs_area_base : y_body_base;
 
@@ -3606,10 +3612,16 @@ function getGlobalMacros(track)
 		global_macros.staff = track.macros["STAFF"];
 	}
 
-	global_macros.row_margin = null;
+	global_macros.r_row_margin = 1.0;
 	if( "ROW_MARGIN" in track.macros)
 	{
-		global_macros.row_margin = parseInt(track.macros["ROW_MARGIN"]);
+		global_macros.r_row_margin = parseFloat(track.macros["ROW_MARGIN"]);
+	}
+
+	global_macros.r_above_rs_area_margin = 1.0;
+	if( "ABOVE_RS_AREA_MARGIN" in track.macros)
+	{
+		global_macros.r_above_rs_area_margin = parseFloat(track.macros["ABOVE_RS_AREA_MARGIN"]);
 	}
 
 	global_macros.theme = "Default";
@@ -3657,6 +3669,17 @@ function getMacros(global_macros, rg)
 	{
 		macros_to_apply.staff = rg.macros["STAFF"];
 	}
+
+	if( "ROW_MARGIN" in rg.macros)
+	{
+		macros_to_apply.r_row_margin = parseFloat(rg.macros["ROW_MARGIN"]);
+	}
+
+	if( "ABOVE_RS_AREA_MARGIN" in rg.macros)
+	{
+		macros_to_apply.r_above_rs_area_margin = parseFloat(rg.macros["ABOVE_RS_AREA_MARGIN"]);
+	}
+
 
 	return macros_to_apply;
 }
@@ -3721,10 +3744,6 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	// Artist
 	if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt");
 	songname += ("/"+global_macros.artist);
-
-	// Apply for rendering parameter if specified by global macros
-	if (global_macros.row_margin !== null)
-		param.row_margin = global_macros.row_margin;
 
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Making pagination");
@@ -3837,10 +3856,8 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 					var row_elements_list = yse.cont;
 					var r = render_measure_row(
 							x_offset + track.pre_render_info["meas_left_offset"],
-							ctx2.paper, yse.macros.x_global_scale, yse.macros.transpose,
-							yse.macros.half_type, row_elements_list, yse.rg, yse.pm, yse.nm,
+							ctx2.paper, yse.macros, row_elements_list, yse.rg, yse.pm, yse.nm,
 							ctx2.y_base, ctx2.param, ctx2.draw,
-							yse.macros.staff, global_macros.theme,
 							(yse.block_id==0 && yse.row_id_in_block==0),
 							yse.macros.reharsal_mark_position=="Inner");
 					ctx2.y_base = r.y_base;
@@ -3892,10 +3909,9 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 					var row_elements_list = yse[pei].cont;
 					var r = render_measure_row(
 							x_offset + track.pre_render_info["meas_left_offset"],
-							paper, yse[pei].macros.x_global_scale, yse[pei].macros.transpose,
-							yse[pei].macros.half_type, row_elements_list,
+							paper, yse[pei].macros, row_elements_list,
 							yse[pei].rg, yse[pei].pm, yse[pei].nm,
-							y_base, param, draw, yse[pei].macros.staff, global_macros.theme,
+							y_base, param, draw,
 							(yse[pei].block_id==0 && yse[pei].row_id_in_block==0),
 							yse[pei].macros.reharsal_mark_position == "Inner");
 					y_base = r.y_base;

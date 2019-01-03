@@ -2959,7 +2959,7 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 		draw, chord_space, body_scaling, all_has_length)
 {
 	// chords is list of chords for each chord object has .renderprop.x property
-	var balken_width = '4px';
+	var balken_width = '3px';
 
 	balken = {
 		groups : [],

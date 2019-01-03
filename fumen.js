@@ -2008,6 +2008,8 @@ function identify_scaling(track, param)
 	console.log("Identify scaling called");
 	var width = param.paper_width - param.x_offset * 2 - track.pre_render_info["meas_left_offset"];
 
+	var debug_see_raw_render = false;
+
 	for(var i = 0; i < track.reharsal_groups.length; ++i)
 	{
 		var rg = track.reharsal_groups[i];
@@ -2065,6 +2067,9 @@ function identify_scaling(track, param)
 
 				// Additional scaling to variable of width of columns
 				var limitvariation = true;
+
+				if(debug_see_raw_render) limitvariation = false;
+
 				if(limitvariation){
 					var sdratio = 0.75; // ratio of standard deviation. sigma_target/sigma. 0 means all the column bcomes the same width(average width).
 					var avg = 0.0;
@@ -2093,6 +2098,9 @@ function identify_scaling(track, param)
 					if(block_measures.length == C && C <= 3){
 						m.body_scaling = Math.min(1.5, m.body_scaling);
 					}
+
+					// Debug code to see the rendering without scaling
+					if(debug_see_raw_render) m.body_scaling = 1.0;
 				}
 
 			}else{
@@ -3289,7 +3297,6 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 
 		var chord_space_list = []; // for chord and rest
 
-		var local_x = 0;
 		var base_space = 20;
 
 		elements.body.forEach(function(e){
@@ -3304,7 +3311,7 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 		if(elements.body.length > 0) groupedBodyElems.push(jQuery.extend(true,{},tmpl));
 		var gbei = 0;
 
-		elements.body.forEach(function(e){
+		elements.body.forEach(function(e, ei){
 			if(g_prev_chord_has_tie ||
 				 chord_name_str === null ||
 				 e.chord_name_str == "" ||
@@ -3320,17 +3327,19 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 				var this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
 				chord_space = Math.floor(base_space / sum_length*this_chord_len);
 			}else{
-				chord_space = Math.floor(base_space / 1 ); //elements.body.length /*num_chord_in_a_measure*/);
+				chord_space = Math.floor(base_space / 1 );
 			}
 			var width = ( (chord_space + guessRSorNoteWidth(e)) * x_global_scale * m.body_scaling);
 			groupedBodyElems[gbei].groupedChordsLen += width;
 			groupedBodyElems[gbei].elems.push({width:width,e:e});
 
+			console.log(gbei + " : note len["+ei+"] : " + width);
+
 			g_prev_chord_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
 			chord_name_str = e.chord_name_str;
 		});
 
-		groupedBodyElems.forEach(function(body_elems){
+		groupedBodyElems.forEach(function(body_elems, gbei){
 			var e0 = body_elems.elems[0].e;
 			var chord_symbol_width = 0;
 			if(e0 instanceof Chord){
@@ -3338,11 +3347,13 @@ function render_measure_row(x, paper, x_global_scale, transpose, half_type,
 						param, draw, C7_width, theme);
 				chord_symbol_width = (cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 			}else if(e0 instanceof Rest){
-				var rr = render_rest(e0, paper, draw, x, y_body_or_rs_base, C7_width, _5lines_intv, param);
+				var rr = render_rest(e0, paper, draw, x, y_body_or_rs_base, 0, _5lines_intv, param);
 				chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 
 				if(draw) rs_area_svg_groups.push(rr.group);
 			}
+
+			console.log(gbei + " : chord len : " + chord_symbol_width);
 
 			var group_scaling = Math.max(1.0, chord_symbol_width/parseFloat(body_elems.groupedChordsLen));
 

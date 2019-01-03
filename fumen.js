@@ -3102,7 +3102,7 @@ function render_rest(e, paper, draw, x, y_body_or_rs_base, C7_width, _5lines_int
 }
 
 function render_measure_row(x, paper, macros,
-		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw, 
+		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw,
 		first_block_first_row, inner_reharsal_mark)
 {
 	var x_global_scale = macros.x_global_scale;
@@ -3405,7 +3405,7 @@ function render_measure_row(x, paper, macros,
 		{
 			// If no elements in body area, minimum width is reservied assuming 1 CM7 chord is located.
 			x += C7_width * x_global_scale * m.body_scaling;
-			x += (40*x_global_scale*m.body_scaling);
+			x += (base_space * x_global_scale*m.body_scaling);
 		}
 
 		//console.log({x:x, body_base:body_base, scaling:m.body_scaling});

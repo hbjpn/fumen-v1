@@ -2878,6 +2878,7 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 			if(d == '0' || d == '1'){
 
 			}else{
+				var ys = balken.groups[gbi].coord[1];
 				var y0 = upper_flag ? Math.max.apply(null,ys) : Math.min.apply(null,ys);
 				// Draw the basic vertical line. For the note with standalone flag(s), some additional length will be added when to draw flags.
 				var o = paper.path(svgLine(note_x_center+deltax, y0, note_x_center+deltax,

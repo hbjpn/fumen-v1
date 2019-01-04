@@ -2665,7 +2665,7 @@ function myLog2(integer)
 
 function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 	meas_start_x, meas_end_x, body_scaling, x_global_scale, barlen, flagintv,
-	balken_width, music_context, meas)
+	balken_width, music_context, meas, param)
 {
 	// Evaluate the flag direction(up or down) by the center of the y-axis position of all the notes/slashes
 
@@ -2768,9 +2768,11 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 			// Currently this code will not be used.
 			// When cater for the optimized balken for triplets ... this needs to be implemented.
 			// TODO :Need to write rest drawing code
-			var text = raphaelText(paper, note_x_center, y,
-				'\ue700', 7, "lc", "smart_music_symbol");
-			bo_group.push(text)
+			//var text = raphaelText(paper, note_x_center, y,
+			//	'\ue700', 7, "lc", "smart_music_symbol");
+			//bo_group.push(text)
+			var rr = render_rest(balken.groups[gbi].e, paper, true, x, rs_y_base, 0, _5lines_intv, param);
+			bo_group.push(rr.group);
 		}
 
 		if(music_context.tie_info.rs_prev_has_tie){
@@ -3017,7 +3019,7 @@ function guessRSorNoteWidth(chord)
 }
 
 function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_start_x, meas_end_x,
-		draw, chord_space, body_scaling, x_global_scale, music_context, meas)
+		draw, chord_space, body_scaling, x_global_scale, music_context, meas, param)
 {
 	// chords is list of chords for each chord object has .renderprop.x property
 	// All elements shall have length indicators
@@ -3060,7 +3062,7 @@ function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_star
 			chord_length = Math.min(ng.lengthIndicator.length,chord_length); // Take the note group of min-length. TODO for cater for multi-group notes
 			has_tie = ng.lengthIndicator.has_tie; //ng.has_tie;
 			if(nr === null){
-				// slash
+				// slash or rest
 				group_y.push(parseInt(rs_y_base + _5lines_intv*2)); // center
 				pos_on_5lines.push(4); // Not used, but put center line for now.
 			}else{
@@ -3089,7 +3091,7 @@ function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_star
 		if( (chord_length >= WHOLE_NOTE_LENGTH/4 || e instanceof Rest) && balken.groups.length > 0){
 			var dbret= draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 				meas_start_x, meas_end_x, body_scaling, x_global_scale, barlen, flagintv,
-				balken_width, music_context, meas);
+				balken_width, music_context, meas, param);
 			balken.groups = [];
 			x = dbret.x;
 		}
@@ -3112,7 +3114,7 @@ function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_star
 			 ei == elems.length-1){
 			var dbret = draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 				meas_start_x, meas_end_x, body_scaling, x_global_scale, barlen, flagintv,
-				balken_width, music_context, meas);
+				balken_width, music_context, meas, param);
 			x = dbret.x;
 			balken.groups = [];
 		}
@@ -3392,10 +3394,13 @@ function render_measure_row(x, paper, macros,
 
 
 		elements.body.forEach(function(e, ei){
-			if(music_context.tie_info.prev_has_tie ||
+
+			// TODO : More strict judge
+			if(e instanceof Chord &&
+				(music_context.tie_info.prev_has_tie ||
 				 chord_name_str === null ||
 				 e.chord_name_str == "" ||
-				(e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str))){
+				(e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str)))){
 
 			}else{ // flush
 				groupedBodyElems.push(jQuery.extend(true,{},tmpl));
@@ -3418,7 +3423,10 @@ function render_measure_row(x, paper, macros,
 			//console.log(gbei + " : note len["+ei+"] : " + width);
 
 			music_context.tie_info.prev_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
-			chord_name_str = e.chord_name_str;
+
+			if(e instanceof Chord)
+				chord_name_str = e.chord_name_str;
+
 		});
 
 		groupedBodyElems.forEach(function(body_elems, gbei){
@@ -3431,7 +3439,7 @@ function render_measure_row(x, paper, macros,
 						y_rs_area_base,
 						_5lines_intv,
 						meas_start_x, meas_end_x,
-						draw, 0, m.body_scaling, x_global_scale, music_context, m);
+						draw, 0, m.body_scaling, x_global_scale, music_context, m, param);
 
 				if(g.group) rs_area_svg_groups.push(g.group);
 
@@ -3444,10 +3452,10 @@ function render_measure_row(x, paper, macros,
 							param, draw, C7_width, theme);
 					chord_symbol_width = (cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 				}else if(e0 instanceof Rest){
-					var rr = render_rest(e0, paper, draw, e0.renderprop.x, y_body_or_rs_base, 0, _5lines_intv, param);
-					chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
+					//var rr = render_rest(e0, paper, draw, e0.renderprop.x, y_body_or_rs_base, 0, _5lines_intv, param);
+					//chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 
-					if(draw) rs_area_svg_groups.push(rr.group);
+					//if(draw) rs_area_svg_groups.push(rr.group);
 				}
 
 				x += Math.max(rs_area_width, chord_symbol_width);

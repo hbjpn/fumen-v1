@@ -2764,13 +2764,6 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 				}
 			}
 		}else if(balken.groups[gbi].type == "rest"){
-			// Do nothing
-			// Currently this code will not be used.
-			// When cater for the optimized balken for triplets ... this needs to be implemented.
-			// TODO :Need to write rest drawing code
-			//var text = raphaelText(paper, note_x_center, y,
-			//	'\ue700', 7, "lc", "smart_music_symbol");
-			//bo_group.push(text)
 			var rr = render_rest(balken.groups[gbi].e, paper, true, x, rs_y_base, 0, _5lines_intv, param);
 			bo_group.push(rr.group);
 		}
@@ -2990,32 +2983,6 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 function getAppropriateVerticalPos(nglist, key, context)
 {
 	// TODO : implmentation
-}
-
-/*
- * Guess rough estimation of width of chord, other than the chord notation
- */
-function guessRSorNoteWidth(chord)
-{
-	if(chord.nglist){
-		var rinji_mark = false;
-		var max_numdot = 0;
-
-		if(chord.nglist[0].nr == null) return 20; // slash
-
-		/*chord.nglist.forEach(function(ng){
-			ng.nr.forEach(function(np){
-				if( np.note.accidental != 0 ) rinji_mark = true; 		// TODO : To cater for music context
-			});
-			max_numdot = Math.max(ng.lengthIndicator.numdot, max_numdot);
-		});
-		*/
-
-		return 20 + (rinji_mark ? 20 : 0) + 10 * max_numdot;
-
-	}else{
-		return 0;
-	}
 }
 
 function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_start_x, meas_end_x,
@@ -3407,20 +3374,7 @@ function render_measure_row(x, paper, macros,
 				++gbei;
 			}
 
-/*
-			var chord_space = 0;
-			if(all_has_length){
-				var this_chord_len = e.nglist[0].lengthIndicator.length; // TODO : Multiple note groups
-				chord_space = Math.floor(base_space / sum_length*this_chord_len);
-			}else{
-				chord_space = Math.floor(base_space / 1 );
-			}
-			var width = ( (chord_space + guessRSorNoteWidth(e, music_context_clone)) * x_global_scale * m.body_scaling);
-			*/
-			//groupedBodyElems[gbei].groupedChordsLen += width;
 			groupedBodyElems[gbei].elems.push(e);
-
-			//console.log(gbei + " : note len["+ei+"] : " + width);
 
 			music_context.tie_info.prev_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
 
@@ -3452,23 +3406,11 @@ function render_measure_row(x, paper, macros,
 							param, draw, C7_width, theme);
 					chord_symbol_width = (cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 				}else if(e0 instanceof Rest){
-					//var rr = render_rest(e0, paper, draw, e0.renderprop.x, y_body_or_rs_base, 0, _5lines_intv, param);
-					//chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
-
-					//if(draw) rs_area_svg_groups.push(rr.group);
+					// Rest is drawn in render_rhythm_slash function in RS area
 				}
 
 				x += Math.max(rs_area_width, chord_symbol_width);
 			}else{
-				// no rs region, or rs region but no length infomration
-				/*
-								if((!g.group) && (!rest_or_long_rests_detected) ){
-									var g = render_empty_rythm_slash(paper, body_base, y_rs_area_base, _5lines_intv,
-											m.body_width, 4, m.body_scaling);
-
-									if(g.group) rs_area_svg_groups.push(g.group);
-								}
-								*/
 
 				if(body_elems.elems.length != 1)
 					throw "SOMETHING WRONG WITH CHORD GROUPING";
@@ -3628,27 +3570,6 @@ function render_measure_row(x, paper, macros,
 				throw "Unkown measure wide instance detected";
 			}
 		}
-/*
-		// Draw Rythm Slashes
-		if(rs_area_detected){
-
-			var g = render_rhythm_slash(
-					elements.body, paper,
-					y_rs_area_base,
-					_5lines_intv,
-					meas_start_x, meas_end_x,
-					draw, 0, m.body_scaling, all_has_length, music_context);
-
-			if(g.group) rs_area_svg_groups.push(g.group);
-
-			if((!g.group) && (!rest_or_long_rests_detected) ){
-				var g = render_empty_rythm_slash(paper, body_base, y_rs_area_base, _5lines_intv,
-						m.body_width, 4, m.body_scaling);
-
-				if(g.group) rs_area_svg_groups.push(g.group);
-			}
-		}
-		*/
 
 		m.renderprop.meas_height = measure_height;
 		measure_heights.push(measure_height);

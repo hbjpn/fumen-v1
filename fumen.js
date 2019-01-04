@@ -2635,12 +2635,6 @@ function to_same_value_group(objs, comp)
 	return ret;
 }
 
-// Global variables to store the tie information across differnt measures
-var rs_prev_coord = null;
-var rs_prev_meas_coord = null;
-var rs_prev_has_tie = false;
-var rs_prev_tie_paper = null;
-
 function render_empty_rythm_slash(paper, x_body_base, rs_y_base, _5lines_intv, body_width, numslash, body_scaling)
 {
 	var group = paper.set();
@@ -2666,7 +2660,8 @@ function myLog2(integer)
 	return log2[integer];
 }
 
-function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width)
+function draw_balken(paper, group, balken, rs_y_base, _5lines_intv,
+	meas_start_x, meas_end_x, barlen, flagintv, balken_width, music_context)
 {
 	// Evaluate the flag direction(up or down) by the center of the y-axis position of all the notes/slashes
 	var center_y = 0.0;
@@ -2797,10 +2792,10 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 			// When cater for the optimized balken for triplets ... this needs to be implemented.
 		}
 
-		if(rs_prev_has_tie){
+		if(music_context.tie_info.rs_prev_has_tie){
 			// Draw tie line
-			var pss = rs_prev_coord;
-			var psm = rs_prev_meas_coord;
+			var pss = music_context.tie_info.rs_prev_coord;
+			var psm = music_context.tie_info.rs_prev_meas_coord;
 
 			// Check the consistency.
 			if(pss[1].length != ys.length){
@@ -2835,8 +2830,8 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 					console.log("brace:"+brace_points);
 					console.log("clip:"+clip);
 
-					var bl = rs_prev_tie_paper.path(svgArcBezie(brace_points)).attr('stroke-width','2px').attr({'clip-rect':clip});
-					rs_prev_tie_paper.set().push(bl);
+					var bl = music_context.tie_info.rs_prev_tie_paper.path(svgArcBezie(brace_points)).attr('stroke-width','2px').attr({'clip-rect':clip});
+					music_context.tie_info.rs_prev_tie_paper.set().push(bl);
 
 					brace_points = [[meas_start_x - 20, y+dy], [meas_start_x - 20, y-round+dy],
 															[x, y-round+dy], [x,y+dy]];
@@ -2853,10 +2848,10 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 			}
 		}
 
-		rs_prev_has_tie = balken.groups[gbi].has_tie;
-		rs_prev_tie_paper = paper;
-		rs_prev_coord = balken.groups[gbi].coord;
-		rs_prev_meas_coord = [meas_start_x, meas_end_x];
+		music_context.tie_info.rs_prev_has_tie = balken.groups[gbi].has_tie;
+		music_context.tie_info.rs_prev_tie_paper = paper;
+		music_context.tie_info.rs_prev_coord = balken.groups[gbi].coord;
+		music_context.tie_info.rs_prev_meas_coord = [meas_start_x, meas_end_x];
 	}
 
 	if(balken.groups.length >= 2){
@@ -2909,7 +2904,7 @@ function draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x
 					group.push(text);
 
 					if( same_sds[0].onka < 8){
-						var rno = 10; //modoru
+						var rno = 10;
 						var rnh = 4;
 						var clip = text.getBBox().x+ "," + text.getBBox().y + ","+text.getBBox().width+","+text.getBBox().height;
 						var path1 = svgPath( [
@@ -2976,7 +2971,7 @@ function guessRSorNoteWidth(chord)
 }
 
 function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x, meas_end_x,
-		draw, chord_space, body_scaling, all_has_length)
+		draw, chord_space, body_scaling, all_has_length, music_context)
 {
 	// chords is list of chords for each chord object has .renderprop.x property
 	var balken_width = '3px';
@@ -3039,7 +3034,8 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 
 			// Flush current groups
 			if( (chord_length >= WHOLE_NOTE_LENGTH/4 || e instanceof Rest) && balken.groups.length > 0){
-				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
+				draw_balken(paper, group, balken, rs_y_base, _5lines_intv,
+					meas_start_x, meas_end_x, barlen, flagintv, balken_width, music_context);
 				balken.groups = [];
 			}
 			balken.sum_len += chord_length;
@@ -3059,21 +3055,14 @@ function render_rhythm_slash(elems, paper, rs_y_base, _5lines_intv, meas_start_x
 				 chord_length >= WHOLE_NOTE_LENGTH/4 ||
 				 balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 ||
 				 ei == elems.length-1){
-				draw_balken(paper, group, balken, rs_y_base, _5lines_intv, meas_start_x, meas_end_x, barlen, flagintv, balken_width);
+				draw_balken(paper, group, balken, rs_y_base, _5lines_intv,
+					meas_start_x, meas_end_x, barlen, flagintv, balken_width, music_context);
 				balken.groups = [];
 			}
 		}
 	}
 
 	return {group: drawn ? group : null};
-}
-
-// Rendering globals
-var g_prev_chord_has_tie = false;
-
-function init_render_global()
-{
-	g_prev_chord_has_tie = false;
 }
 
 function new_row_yinfo()
@@ -3123,7 +3112,7 @@ function render_rest(e, paper, draw, x, y_body_or_rs_base, C7_width, _5lines_int
 
 function render_measure_row(x, paper, macros,
 		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw,
-		first_block_first_row, inner_reharsal_mark)
+		first_block_first_row, inner_reharsal_mark, music_context)
 {
 	var x_global_scale = macros.x_global_scale;
 	var transpose = macros.transpose;
@@ -3338,7 +3327,7 @@ function render_measure_row(x, paper, macros,
 		var gbei = 0;
 
 		elements.body.forEach(function(e, ei){
-			if(g_prev_chord_has_tie ||
+			if(music_context.tie_info.prev_has_tie ||
 				 chord_name_str === null ||
 				 e.chord_name_str == "" ||
 				(e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str))){
@@ -3361,7 +3350,7 @@ function render_measure_row(x, paper, macros,
 
 			console.log(gbei + " : note len["+ei+"] : " + width);
 
-			g_prev_chord_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
+			music_context.tie_info.prev_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
 			chord_name_str = e.chord_name_str;
 		});
 
@@ -3537,7 +3526,7 @@ function render_measure_row(x, paper, macros,
 					y_rs_area_base,
 					_5lines_intv,
 					meas_start_x, meas_end_x,
-					draw, 0, m.body_scaling, all_has_length);
+					draw, 0, m.body_scaling, all_has_length, music_context);
 
 			if(g.group) rs_area_svg_groups.push(g.group);
 
@@ -3765,6 +3754,20 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 	if(draw) raphaelText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt");
 	songname += ("/"+global_macros.artist);
 
+	// Music context
+	var music_context = {
+		accidental_info : {},
+		key_info : {},
+		time_info : {},
+		tie_info : {
+			rs_prev_coord : null,
+			rs_prev_meas_coord : null,
+			rs_prev_has_tie : false,
+			rs_prev_tie_paper : null,
+			prev_has_tie : false
+		}
+	};
+
 	/* Paging */
 	console.log("render_impl called with " + draw + " : Making pagination");
 
@@ -3879,7 +3882,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							ctx2.paper, yse.macros, row_elements_list, yse.rg, yse.pm, yse.nm,
 							ctx2.y_base, ctx2.param, ctx2.draw,
 							(yse.block_id==0 && yse.row_id_in_block==0),
-							yse.macros.reharsal_mark_position=="Inner");
+							yse.macros.reharsal_mark_position=="Inner", music_context);
 					ctx2.y_base = r.y_base;
 				}
 
@@ -3933,7 +3936,7 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 							yse[pei].rg, yse[pei].pm, yse[pei].nm,
 							y_base, param, draw,
 							(yse[pei].block_id==0 && yse[pei].row_id_in_block==0),
-							yse[pei].macros.reharsal_mark_position == "Inner");
+							yse[pei].macros.reharsal_mark_position == "Inner", music_context);
 					y_base = r.y_base;
 				}
 			}

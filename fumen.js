@@ -3352,24 +3352,26 @@ function render_measure_row(x, paper, macros,
 		// C3 -> 0x3C as 0 C-2 as index 0, G8 as 127(0x7F)
 		music_context.accidental_info = new Array(128).fill(0);
 
-
-
 		var tmpl = {elems:[],groupedChordsLen:0};
 		var groupedBodyElems = [];
 
 		if(elements.body.length > 0) groupedBodyElems.push(jQuery.extend(true,{},tmpl));
 		var gbei = 0;
 
-
 		elements.body.forEach(function(e, ei){
 
 			// TODO : More strict judge
-			if(e instanceof Chord &&
+			// Currently, Rest and Chords are in the different groups.
+			// However to cater for, for instance triplets including rests,
+			// they needs to be in the same group.
+			if(groupedBodyElems[gbei].elems.length == 0){
+				// Keei pin the same group
+			}else if(e instanceof Chord &&
+				(groupedBodyElems[gbei].elems[0] instanceof Chord) && // Rest and chords will not be in the same group
 				(music_context.tie_info.prev_has_tie ||
-				 chord_name_str === null ||
 				 e.chord_name_str == "" ||
-				(e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str)))){
-
+				 (e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str)))){
+					 // Keep in the same group
 			}else{ // flush
 				groupedBodyElems.push(jQuery.extend(true,{},tmpl));
 				++gbei;

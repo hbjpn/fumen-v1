@@ -2937,7 +2937,7 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 				// Currently, simple strategy is adopted for now.
 				var dir = 1;
 				if(g == gg.length - 1) dir = -1;
-				var neighbor_x = gg[g + dir][ gg[g+dir].length - 1 ].coord[0];
+				var neighbor_x = gg[g + dir][ gg[g+dir].length - 1 ].renderprop.x;
 				var blen = Math.abs(neighbor_x - pssx) * 0.3;
 
 				for(var fi = 1; fi < numflag; ++fi){ // fi=0 is alread drawn by common balken
@@ -3007,15 +3007,14 @@ function getAppropriateVerticalPos(nglist, key, context)
 }
 
 function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_start_x, meas_end_x,
-		draw, chord_space, body_scaling, x_global_scale, music_context, meas, param)
+		draw, chord_space, body_scaling, x_global_scale, music_context, meas, param, sum_len)
 {
 	// chords is list of chords for each chord object has .renderprop.x property
 	// All elements shall have length indicators
 	var balken_width = '3px';
 
 	balken = {
-		groups : [],
-		sum_len : 0
+		groups : []
 	};
 
 	var drawn = false;
@@ -3083,7 +3082,7 @@ function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_star
 			balken.groups = [];
 			x = dbret.x;
 		}
-		balken.sum_len += chord_length;
+		sum_len += chord_length;
 		balken.groups.push({
 			e : e,
 			type : (e instanceof Rest ? "rest" : (rhythm_only ? "slash" : "notes")),
@@ -3098,7 +3097,7 @@ function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_star
 		});
 		if(e instanceof Rest ||
 			 chord_length >= WHOLE_NOTE_LENGTH/4 ||
-			 balken.sum_len % (WHOLE_NOTE_LENGTH/4) == 0 ||
+			 sum_len % (WHOLE_NOTE_LENGTH/4) == 0 ||
 			 ei == elems.length-1){
 			var dbret = draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 				meas_start_x, meas_end_x, body_scaling, x_global_scale, barlen, flagintv,
@@ -3108,7 +3107,7 @@ function render_rhythm_slash(x, elems, paper, rs_y_base, _5lines_intv, meas_star
 		}
 	}
 
-	return {group: drawn ? group : null, x:x};
+	return {group: drawn ? group : null, x:x, sum_len:sum_len};
 }
 
 function new_row_yinfo()
@@ -3406,6 +3405,9 @@ function render_measure_row(x, paper, macros,
 
 		});
 
+		// musical_pos inside a measure
+		var musical_pos = 0;
+
 		groupedBodyElems.forEach(function(body_elems, gbei){
 
 			// Draw Rythm Slashes, first
@@ -3416,7 +3418,9 @@ function render_measure_row(x, paper, macros,
 						y_rs_area_base,
 						_5lines_intv,
 						meas_start_x, meas_end_x,
-						draw, 0, m.body_scaling, x_global_scale, music_context, m, param);
+						draw, 0, m.body_scaling, x_global_scale, music_context, m, param, musical_pos);
+
+				musical_pos = g.sum_len;
 
 				if(g.group) rs_area_svg_groups.push(g.group);
 

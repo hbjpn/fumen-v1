@@ -3878,15 +3878,30 @@ function render_impl(canvas, track, just_to_estimate_size, param, async_mode, pr
 
 		var sum_y = 0;
 		var page_cont = [];
+		var avoid_separated_rm = true;
 		for(var i = 0; i < y_stacks.length; ++i)
 		{
 			if(sum_y + y_stacks[i].height <= (score_height - param.y_offset)){
 				sum_y += y_stacks[i].height;
 				page_cont.push(y_stacks[i]);
 			}else{
-				pageslist.push(page_cont);
-				page_cont = [y_stacks[i]];
-				sum_y = y_stacks[i].height;
+				if(avoid_separated_rm &&
+					 page_cont.length >= 1 &&
+					 page_cont[page_cont.length-1].type=="reharsal" &&
+					 y_stacks[i].type=="meas")
+				{
+					var prev_ys = page_cont.pop();
+					pageslist.push(page_cont);
+					page_cont = [prev_ys];
+					sum_y = y_stacks[i].height;
+				}else{
+					pageslist.push(page_cont);
+					page_cont = [];
+					sum_y = 0;
+				}
+
+				page_cont.push(y_stacks[i]);
+				sum_y += y_stacks[i].height;
 			}
 		}
 		if(page_cont.length > 0)

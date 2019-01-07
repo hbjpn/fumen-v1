@@ -3386,7 +3386,7 @@ function render_measure_row(x, paper, macros,
 			// they needs to be in the same group.
 			if(groupedBodyElems[gbei].elems.length == 0){
 				// Keei pin the same group
-			}else if(e instanceof Chord &&
+			}else if(all_has_length && e instanceof Chord &&
 				(groupedBodyElems[gbei].elems[0] instanceof Chord) && // Rest and chords will not be in the same group
 				(music_context.tie_info.prev_has_tie ||
 				 e.chord_name_str == "" ||

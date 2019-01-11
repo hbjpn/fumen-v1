@@ -2726,13 +2726,13 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 		var d = balken.groups[gbi].onka;
 		var pos_on_5lines = balken.groups[gbi].pos_on_5lines;
 		var sharp_flats = balken.groups[gbi].sharp_flats;
+		var numdot = balken.groups[gbi].numdot;
 
 		var bo_group = paper.set();
 
 		var note_x_center = x;
 
 		if(balken.groups[gbi].type == "slash"){
-			var numdot = balken.groups[gbi].numdot;
 			if(d == '0' || d == '1'){
 				raphaelSlash(paper, bo_group, note_x_center, ys[0], d, numdot, _5lines_intv);
 			}else{
@@ -2767,6 +2767,12 @@ function draw_balken(x, paper, group, balken, rs_y_base, _5lines_intv,
 					text = raphaelText(paper, x, y+SFN_YSHIFTS[sharp_flats[ci]],
 						SHARP_FLAT_CODE[sharp_flats[ci]], 14, "lc", "smart_music_symbol");
 					bo_group.push(text);
+				}
+
+				// dots
+				for(var i = 0; i < numdot; ++i){
+					var dy = (pos_on_5lines[ci]%2==0 ? -_5lines_intv/2 : 0);
+					bo_group.push( paper.circle(note_x_center+12+i*5,y+dy,1).attr({'fill':'black'}) );
 				}
 
 				// Draw additional horizontal lines

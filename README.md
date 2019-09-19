@@ -6,6 +6,7 @@ Chord and Rythm score rendering engine
 * [jQuery](http://jquery.org) >= 1.11.0
 
 ## Getting started
+Following is the example to reneder a code for div element with id="canvas".
 ```javascript
 
 // Initialize fumen on ready function
@@ -20,7 +21,12 @@ var p = new Fumen.Parser();
 var track = p.parse(code);
 
 // Maker a renderer object.
-var renderer = new Fumen.Renderer($("#canvas"), paper_width, paper_height);
+var renderer = renderer = new Fumen.Renderer($("#canvas"), {
+					paper_width:793,
+					paper_height:1122,
+					ncol:1,
+					nrow:1
+				});
 
 // Render it !
 var task = renderer.render(track, false, null);

@@ -16,6 +16,28 @@
 	}
 }
 
+html{
+	height: auto;
+	margin: 0px;
+	padding: 0px;
+}
+body {
+	/* width: 420mm; */ /* needed for Chrome for A3 landsapce*/
+	width: 210mm;  /* needed for Chrome for A4*/
+	margin: 0px;
+	padding: 0px;
+	height: auto;
+}
+
+div {
+	border: 0px solid black;
+}
+
+@page {
+  /*size: A3 landscape;
+  margin: 0;*/
+}
+
 #score_code {
 	font-family: "Courier New", Courier, "Lucida Console", Monaco, monospace;
 	font-size: 13px;
@@ -38,9 +60,31 @@
 var dpi = 96; // dot/inch
 var A4_width_mm = 210;
 var A4_height_mm = 297;
+
+var A3h_width_mm = A4_width_mm*2;
+var A3h_height_mm = A4_height_mm;
+
 var mm_inch = 25.4; // mm/inch
-var paper_width = dpi * A4_width_mm / mm_inch;
-var paper_height = dpi * A4_height_mm / mm_inch;
+var safety_factor = 0.99; // exactly the same size will result in generation of empty paper for some browsers
+var A4_paper_width = dpi * A4_width_mm / mm_inch * safety_factor;
+var A4_paper_height = dpi * A4_height_mm / mm_inch * safety_factor;
+
+var A3h_paper_width = dpi * A3h_width_mm / mm_inch * safety_factor;
+var A3h_paper_height = dpi * A3h_height_mm / mm_inch * safety_factor;
+
+
+var paper_width = A4_paper_width;
+var paper_height = A4_paper_height;
+var ncol = 1;
+var nrow = 1;
+
+//A3 landscape
+/*
+var paper_width = A3h_paper_width;
+var paper_height = A3h_paper_height;
+var ncol = 2;
+var nrow = 1;
+*/
 
 var timerStart = null;
 var tempo_bpm = 60;
@@ -65,6 +109,8 @@ function Stop()
 		sequencer.stop();
 }
 
+var renderer = null;
+
 function Generate()
 {
 	Stop();
@@ -77,8 +123,15 @@ function Generate()
 	if(async_mode){
 		try{
 			var track = p.parse(code);
-			var renderer = new Fumen.Renderer($("#scorecanvas"), paper_width, paper_height);
-			renderer.clear();
+			if(!renderer){
+				renderer = new Fumen.Renderer($("#scorecanvas"), {
+					paper_width:paper_width,
+					paper_height:paper_height,
+					ncol:ncol,
+					nrow:nrow
+				});
+			}
+			//renderer.clear();
 			var task = renderer.render(track, async_mode, showProgress);
 		}catch(e){
 			console.log("Exception catched : " + e);
@@ -95,8 +148,15 @@ function Generate()
 		setTimeout(function(){
 			try{
 				var track = p.parse(code);
-				var renderer = new Fumen.Renderer($("#scorecanvas"), paper_width, paper_height);
-				renderer.clear();
+				if(!renderer){
+					renderer = new Fumen.Renderer($("#scorecanvas"), {
+						paper_width:paper_width,
+						paper_height:paper_height,
+						ncol:ncol,
+						nrow:nrow
+					});
+				}
+				//renderer.clear();
 				var task = renderer.render(track, async_mode, showProgress);
 				sequencer = new Fumen.Sequencer(track);
 			}catch(e){
@@ -177,10 +237,4 @@ function Generate()
 <br/>
 <p>To generate PDF file, please use print feature of your web browser. ( Select "save as pdf" )</p>
 <hr/>
-</div>
-<div style="background-color:gray; padding:10px;">
-<div id="scorecanvas"></div>
-</div>
-<div id="invisible_view" style="opacity: 0;"></div>
-</body>
-</html>
+</div><div id="scorecanvas"></div><div id="invisible_view" style="opacity: 0;"></div></body></html>

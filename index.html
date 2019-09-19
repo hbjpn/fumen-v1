@@ -131,7 +131,7 @@ function Generate()
 					nrow:nrow
 				});
 			}
-			//renderer.clear();
+			renderer.clear();
 			var task = renderer.render(track, async_mode, showProgress);
 		}catch(e){
 			console.log("Exception catched : " + e);
@@ -156,7 +156,7 @@ function Generate()
 						nrow:nrow
 					});
 				}
-				//renderer.clear();
+				renderer.clear();
 				var task = renderer.render(track, async_mode, showProgress);
 				sequencer = new Fumen.Sequencer(track);
 			}catch(e){

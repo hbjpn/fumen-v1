@@ -19,7 +19,7 @@ var Fumen = (function(){
  * Chord rendering profile
  */
 var CHORD_RENDER_THEME = {
-"Default":{
+"Realbook":{
 	"_base_font_size" : 18,
 	"_base_font_family" : "realbook_music_symbol",
 	"_base_font_profile" :{
@@ -3700,10 +3700,10 @@ function getGlobalMacros(track)
 		global_macros.r_above_rs_area_margin = parseFloat(track.macros["ABOVE_RS_AREA_MARGIN"]);
 	}
 
-	global_macros.theme = "Default";
+	global_macros.theme = "Arial";
 	if( "THEME" in track.macros)
 	{
-		global_macros.theme = track.macros["THEME"];
+		global_macros.theme = track.macros["THEME"] == "Default" ? "Arial" : track.macros["THEME"];
 	}
 
 	global_macros.reharsal_mark_position = "Default";

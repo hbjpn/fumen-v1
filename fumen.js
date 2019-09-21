@@ -838,6 +838,10 @@ function MeasureBoundaryFinMark()
 {
 }
 
+function MeasureBoundaryDblSimile()
+{
+}
+
 var inherits = function inherits(sub, sup) {
     var F = function F () {};
     F.prototype = sup.prototype;
@@ -850,6 +854,7 @@ inherits(LoopBeginMark, MeasureBoundary);
 inherits(LoopEndMark, MeasureBoundary);
 inherits(LoopBothMark, MeasureBoundary);
 inherits(MeasureBoundaryFinMark, MeasureBoundary);
+inherits(MeasureBoundaryDblSimile, MeasureBoundary);
 
 // Signs
 function DaCapo()
@@ -948,22 +953,23 @@ var TOKEN_BRACKET_LA = 7; // Left angle
 var TOKEN_BRACKET_RA = 8; // Right angle
 var TOKEN_BRACKET_LW = 9; // Left wave {
 var TOKEN_BRACKET_RW = 10; // Right wave }
-var TOKEN_MB = 14;             // "|"
-var TOKEN_MB_DBL = 15;         // "||"
-var TOKEN_MB_LOOP_BEGIN = 16;  // "||:"
-var TOKEN_MB_LOOP_END = 17;    // ":||"
-var TOKEN_MB_LOOP_BOTH = 18;   // ":||:"
-var TOKEN_MB_FIN = 19;         // "||."
-var TOKEN_COMMA = 20;
-var TOKEN_SLASH =  21; // "\/"
-var TOKEN_NL = 22; // \n"
-var TOKEN_PERCENT = 23;
-var TOKEN_EQUAL = 24;
-var TOKEN_STRING = 25;    // String with double quote
-var TOKEN_STRING_SQ = 26; // String with single quote
-var TOKEN_STRING_GRAVE_ACCENT = 27; // String with grave accent '
-var TOKEN_ATMARK = 30; // @
-var TOKEN_COLON = 31; // :
+var TOKEN_MB = 20;             // "|"
+var TOKEN_MB_DBL = 21;         // "||"
+var TOKEN_MB_LOOP_BEGIN = 22;  // "||:"
+var TOKEN_MB_LOOP_END = 23;    // ":||"
+var TOKEN_MB_LOOP_BOTH = 24;   // ":||:"
+var TOKEN_MB_FIN = 25;         // "||."
+var TOKEN_MB_DBL_SIMILE = 26;  // ".//."
+var TOKEN_COMMA = 30;
+var TOKEN_SLASH =  31; // "\/"
+var TOKEN_NL = 32; // \n"
+var TOKEN_PERCENT = 33;
+var TOKEN_EQUAL = 34;
+var TOKEN_STRING = 35;    // String with double quote
+var TOKEN_STRING_SQ = 36; // String with single quote
+var TOKEN_STRING_GRAVE_ACCENT = 37; // String with grave accent '
+var TOKEN_ATMARK = 40; // @
+var TOKEN_COLON = 41; // :
 
 var WORD_DEFINIITON_GENERAL = /^(\w[\w\.\,\-\+\#\:]*)/;
 var WORD_DEFINITION_IN_REHARSAL_MARK = /^[^\[\]]*/;
@@ -1013,11 +1019,11 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		return {token:plain_str, s:s, type:(quote == '"' ? TOKEN_STRING : (quote == "'" ? TOKEN_STRING_SQ : TOKEN_STRING_GRAVE_ACCENT)), ss:skipped_spaces};
 	}
 
-	var r = charStartsWithAmong(s, ["||:","||.","||","|"]);
+	var r = charStartsWithAmong(s, ["||:","||.","||","|","./|/."]);
 	if(r != null){
 		return {token:r.s, s:s.substr(r.s.length), ss:skipped_spaces,
 			type: [
-				TOKEN_MB_LOOP_BEGIN, TOKEN_MB_FIN, TOKEN_MB_DBL, TOKEN_MB][r.index]
+				TOKEN_MB_LOOP_BEGIN, TOKEN_MB_FIN, TOKEN_MB_DBL, TOKEN_MB, TOKEN_MB_DBL_SIMILE][r.index]
 		};
 	}
 
@@ -1276,7 +1282,7 @@ Parser.prototype.parseRest = function(trig_token, trig_token_type, s)
 Parser.prototype.parseMeasure = function(trig_token_obj, s)
 {
 	// prerequisite:
-	//   trig_boundary == TOKEN_MB || TOKEN_MB_DBL || TOKEN_MB_LOOP_BEGIN
+	//   trig_boundary == TOKEN_MB || TOKEN_MB_DBL || TOKEN_MB_LOOP_BEGIN || TOKEN_MB_DBL_SIMILE
 	// note:
 	//   | or || or ||: or :|| at the end of the measure will "not" be consumed.
 	var measure = new Measure();
@@ -1293,6 +1299,8 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 		measure.elements.push(new LoopBothMark(trig_token_obj.param));
 	else if(trig_token_obj.type == TOKEN_MB_FIN)
 		measure.elements.push(new MeasureBoundaryFinMark());
+	else if(trig_token_obj.type == TOKEN_MB_DBL_SIMILE)
+		measure.elements.push(new MeasureBoundaryDblSimile());
 
 	var loop_flg = true;
 	var atmark_detected = false;
@@ -1391,6 +1399,10 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 			measure.elements.push(new MeasureBoundaryFinMark());
 			loop_flg = false;
 			break;
+		case TOKEN_MB_DBL_SIMILE:
+			measure.elements.push(new MeasureBoundaryDblSimile());
+			loop_flg = false;
+			break;
 		default:
 			this.onParseError("ERROR_WHILE_PARSE_MEASURE");
 			break;
@@ -1421,6 +1433,7 @@ Parser.prototype.parseMeasures = function(trig_token_obj, s, double_line_break)
 		case TOKEN_MB_LOOP_END:
 		case TOKEN_MB_LOOP_BOTH:
 		case TOKEN_MB_FIN:
+		case TOKEN_MB_DBL_SIMILE:
 			var tr = this.nextToken(s);
 			switch(tr.type){
 			case TOKEN_NL:
@@ -1506,7 +1519,7 @@ Parser.prototype.parse = function(s)
 					track.reharsal_groups.push(currentReharsalGroup);
 				currentReharsalGroup = new ReharsalGroup();
 				currentReharsalGroup.name = r.reharsalMarkName;
-			}else if([TOKEN_MB, TOKEN_MB_DBL, TOKEN_MB_LOOP_BEGIN, TOKEN_MB_LOOP_BOTH, TOKEN_MB_FIN].indexOf(r.type) >= 0){
+			}else if([TOKEN_MB, TOKEN_MB_DBL, TOKEN_MB_LOOP_BEGIN, TOKEN_MB_LOOP_BOTH, TOKEN_MB_FIN, TOKEN_MB_DBL_SIMILE].indexOf(r.type) >= 0){
 				r = this.parseMeasures(r, r.s);
 				if( currentReharsalGroup.blocks.length == 0 ){
 					currentReharsalGroup.blocks.push(new Array());
@@ -2213,6 +2226,8 @@ function get_boundary_sign(e)
 		return 'B';
 	}else if(e instanceof MeasureBoundaryFinMark){
 		return 'f';
+	}else if(e instanceof MeasureBoundaryDblSimile){
+		return 'r';
 	}
 	throw "Invalid boundary object";
 }
@@ -2220,14 +2235,15 @@ function get_boundary_sign(e)
 function boundary_type_without_line_break(b0, b1)
 {
 	// b0 and b1 must be either following characters
-	// s : Single, d : Double, b: Loop Begin, e: Loop End, B: Loop Both, n:null
+	// s : Single, d : Double, b: Loop Begin, e: Loop End, B: Loop Both, r: Double Simile, n:null
 	var profile = {
-		"ss":"s", "sd":"d",           "sb":"b",           "sn":"s",
-		"ds":"d", "dd":"d",           "db":"b",           "dn":"d",
-		"es":"e", "ed":"e", "ee":"e", "eb":"B",           "en":"e",
+		"ss":"s", "sd":"d",           "sb":"b",                     "sn":"s",
+		"ds":"d", "dd":"d",           "db":"b",                     "dn":"d",
+		"es":"e", "ed":"e", "ee":"e", "eb":"B",                     "en":"e",
 		                              "bb":"b",
 		                                        "BB":"B",
-		                                                  "fn":"f",
+		                                                            "fn":"f",
+		                                                  "rr":"r",
 		"ns":"s", "nd":"d",           "nb":"b"
 	};
 	var key = get_boundary_sign(b0)+get_boundary_sign(b1);
@@ -2240,14 +2256,15 @@ function boundary_type_without_line_break(b0, b1)
 function boundary_type_with_line_break(b0, b1, side)
 {
 	// b0 and b1 must be either following characters
-	// s : Single, d : Double, b: Loop Begin, e: Loop End, B: Loop Both, n:null
+	// s : Single, d : Double, b: Loop Begin, e: Loop End, B: Loop Both, r: Double Simile, n:null
 	// side must be either 'end' or 'begin'
 	var profile = {
 		"ss":"ss", "sd":"sd",            "sb":"sb",
 		"ds":"ds", "dd":"dd",            "db":"db",
 		"es":"es", "ed":"ed", "ee":"es", "eb":"eb",
 		                                 "bb":"sb",
-		                                            "BB":"eb"
+		                                            "BB":"eb",
+		                                            	       "rr":"rr"
 	};
 	var key = get_boundary_sign(b0)+get_boundary_sign(b1);
 	if(key in profile){
@@ -2288,6 +2305,8 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 
 	if(side == 'end'){
 		var thisIsLastMeasureInLine = (e1 === null) || ( hasNewLine );
+		
+		// If this is not the last measure in this line, then does not draw the boundary. Draw in the "begin" side of next measure.
 		if(!thisIsLastMeasureInLine) return {group:null, x:x, bx:bx};
 	}
 
@@ -2352,6 +2371,10 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 		x += 3;
 		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"}) );
+		break;
+	case 'r':
+		var width = render_simile_mark(draw, paper, group, x, y_body_base, row_height, 2, true);
+		x += width;
 		break;
 	default:
 		throw "Internal error";
@@ -2666,6 +2689,33 @@ function render_empty_rythm_slash(paper, x_body_base, rs_y_base, _5lines_intv, b
 		raphaelSlash(paper, group, x, (rs_y_base + _5lines_intv*2), '0', 0, _5lines_intv);
 	}
 	return {group:group};
+}
+
+function render_simile_mark(draw, paper, group, x, y_body_base, row_height, numslash, put_boundary)
+{
+	var h = 4;
+	var H = 12;
+	var i = 4;
+	var cm = 2;
+	var cr = 1.2;
+	var _5lines_intv = row_height/4;
+	var x0 = x;
+	if(draw) group.push( paper.circle(x+cm, y_body_base + _5lines_intv*1.5, cr).attr({fill:"black"}) );
+	for(var r = 0; r < numslash; ++r){
+		var y = y_body_base;
+		x += (h+i)*r;
+		if(draw){
+			var path = svgPath( [[x,y+_5lines_intv*3],[x+h,y+_5lines_intv*3],[x+h+H,y+_5lines_intv*1],[x+H,y+_5lines_intv]], true);
+			var obj = paper.path(path).attr({'fill':'#000000'});
+			group.push(obj);
+		}
+	}
+	if(draw) group.push( paper.circle(x+h+H-cm, y_body_base + row_height/4*2.5, cr).attr({fill:"black"}) );
+	var width = (h+i)*(numslash-1)+h+H;
+	if(put_boundary){
+		if(draw) group.push( paper.path(svgLine(x0+width/2, y_body_base, x0+width/2, y_body_base + row_height)).attr({"stroke-width":"1"}) );
+	}
+	return width;
 }
 
 function myLog2(integer)

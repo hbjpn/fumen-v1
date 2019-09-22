@@ -481,6 +481,14 @@ function Rest(length_s)
 	this.renderprop = {};
 }
 
+function Simile(numslash)
+{
+	// NOTE : Double simile on measure boundary is not treated in this class, it is treated as a one of boundary type
+	this.numslash = numslash;
+	this.renderprop = {};
+	this.nglist = null;
+}
+
 
 var cnrg = new RegExp();
 cnrg.compile(/^((sus4?)|(add(9|13))|(alt)|(dim)|(7|9|6|11|13)|((\+|\#)(5|9|13|11))|((\-|b)(5|9|13))|([Mm]([Aa][Jj]?|[Ii][Nn]?)?)|([\,\(\)]))/);
@@ -970,6 +978,7 @@ var TOKEN_STRING_SQ = 36; // String with single quote
 var TOKEN_STRING_GRAVE_ACCENT = 37; // String with grave accent '
 var TOKEN_ATMARK = 40; // @
 var TOKEN_COLON = 41; // :
+var TOKEN_PERIOD = 42; // .
 
 var WORD_DEFINIITON_GENERAL = /^(\w[\w\.\,\-\+\#\:]*)/;
 var WORD_DEFINITION_IN_REHARSAL_MARK = /^[^\[\]]*/;
@@ -1040,7 +1049,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 		return {token:m[0],s:s.substr(m[0].length), ss:skipped_spaces, type:(m[1]==":||:" ? TOKEN_MB_LOOP_BOTH : TOKEN_MB_LOOP_END),param:{times:loopTimes,ntimes:isNTimes}};
 	}
 
-	var r = charIsIn(s[0], '[]<>(){},\n\/%=@:');
+	var r = charIsIn(s[0], '[]<>(){},\n\/%=@:.');
 	if(r != null){
 		return {token: s[0], s: s.substr(1), ss:skipped_spaces,
 			type: [
@@ -1049,7 +1058,7 @@ Parser.prototype.nextToken = function(s, dont_skip_spaces)
 				TOKEN_BRACKET_LR, TOKEN_BRACKET_RR,
 				TOKEN_BRACKET_LW, TOKEN_BRACKET_RW,
 				TOKEN_COMMA, TOKEN_NL, TOKEN_SLASH,
-				TOKEN_PERCENT, TOKEN_EQUAL, TOKEN_ATMARK, TOKEN_COLON][r.index]
+				TOKEN_PERCENT, TOKEN_EQUAL, TOKEN_ATMARK, TOKEN_COLON, TOKEN_PERIOD][r.index]
 		};
 	}
 
@@ -1269,6 +1278,25 @@ Parser.prototype.parseChordSymbol = function(trig_token, trig_token_type, s)
 	return {s:s, chord:chord};
 };
 
+Parser.prototype.parseInMeasSimile = function(trig_token, trig_token_type, s)
+{
+	// prerequisite:
+	//   trig_token_type == TOKEN_PERIOD
+	// Parsing rule:
+	//      Any continuous string of "/" and following period "."
+
+	chord_symbol = trig_token;
+	var m = s.match(/(\/+)\./);
+	var simile = null;
+	if(m){
+		var numslash = m[1].length;
+		s = s.substr(m[0].length);
+		simile = new Simile(numslash);
+	}
+	
+	return {s:s, simile:simile};
+};
+
 Parser.prototype.parseRest = function(trig_token, trig_token_type, s)
 {
 	// Analyze Rest symbol
@@ -1353,6 +1381,12 @@ Parser.prototype.parseMeasure = function(trig_token_obj, s)
 		case TOKEN_COLON:
 			var r = this.parseChordSymbol(r.token, r.type, r.s);
 			measure.elements.push(r.chord);
+			s = r.s;
+			break;
+		case TOKEN_PERIOD:
+			// Only simile symbol at this moment
+			var r = this.parseInMeasSimile(r.token, r.type, r.s);
+			measure.elements.push(r.simile);
 			s = r.s;
 			break;
 		case TOKEN_BRACKET_LA:
@@ -1952,6 +1986,11 @@ function classifyElements(measure)
 	var body_elements = new Array();
 	var footer_elements = new Array();
 	var measure_wide_elements = new Array();
+	
+	// For simile marks
+	var simile_body_idx = new Array();
+	var simile_measure_wide_idx = new Array();
+	var simile_objs = new Array();
 
 	for(var ei = 0; ei < m.elements.length; ++ei){
 		var e = m.elements[ei];
@@ -1971,6 +2010,12 @@ function classifyElements(measure)
 				measure_wide_elements.push(e);
 			}else if(e instanceof LongRestIndicator){
 				measure_wide_elements.push(e);
+			}else if(e instanceof Simile){
+				// Simile is body elements when at least one another body element(including another simile) exsits, otherwise measure wide elements.
+				// Judge after screeining.
+				simile_body_idx.push(body_elements.length);
+				simile_measure_wide_idx.push(measure_wide_elements.length);
+				simile_objs.push(e);
 			}else if(e instanceof Time){
 				// Time mark is treated as header element irrespective of its positionat the second element is treated as header part
 				header_elements.push(e);
@@ -1997,7 +2042,17 @@ function classifyElements(measure)
 
 			}
 		}
-
+	}
+	
+	if(body_elements.length > 0 || simile_objs.length >= 2){
+		// simile makrs are all body elements
+		for(var i=0; i < simile_body_idx.length; ++i){
+			body_elements.splice(simile_body_idx[i]+i,0,simile_objs[i]);
+		}
+	}else if(simile_objs.length >= 1){
+		// simile mark is measure wide element
+		if(simile_objs.length != 1){ throw "Error on classifying simile marks"; }
+		measure_wide_elements.splice(simile_body_idx[0],0,simile_objs[0]);
 	}
 
 	return {header:header_elements, body:body_elements, footer:footer_elements, measure_wide:measure_wide_elements};
@@ -2373,7 +2428,7 @@ function draw_boundary(side, e0, e1, hasNewLine, paper, x, y_body_base, param, d
 		if(draw) group.push( paper.path(svgLine(x, y_body_base, x, y_body_base + row_height)).attr({"stroke-width":"2"}) );
 		break;
 	case 'r':
-		var width = render_simile_mark(draw, paper, group, x, y_body_base, row_height, 2, true);
+		var width = render_simile_mark(draw, paper, group, x, y_body_base, row_height, 2, true, 'l');
 		x += width;
 		break;
 	default:
@@ -2691,7 +2746,7 @@ function render_empty_rythm_slash(paper, x_body_base, rs_y_base, _5lines_intv, b
 	return {group:group};
 }
 
-function render_simile_mark(draw, paper, group, x, y_body_base, row_height, numslash, put_boundary)
+function render_simile_mark(draw, paper, group, x, y_body_base, row_height, numslash, put_boundary, align)
 {
 	var h = 4;
 	var H = 12;
@@ -2699,6 +2754,11 @@ function render_simile_mark(draw, paper, group, x, y_body_base, row_height, nums
 	var cm = 2;
 	var cr = 1.2;
 	var _5lines_intv = row_height/4;
+	var width = (h+i)*(numslash-1)+h+H;
+
+	if(align == 'c') x -= width/2;
+	else if(align == 'r') x -= width;
+	
 	var x0 = x;
 	if(draw) group.push( paper.circle(x+cm, y_body_base + _5lines_intv*1.5, cr).attr({fill:"black"}) );
 	for(var r = 0; r < numslash; ++r){
@@ -2711,7 +2771,6 @@ function render_simile_mark(draw, paper, group, x, y_body_base, row_height, nums
 		}
 	}
 	if(draw) group.push( paper.circle(x+h+H-cm, y_body_base + row_height/4*2.5, cr).attr({fill:"black"}) );
-	var width = (h+i)*(numslash-1)+h+H;
 	if(put_boundary){
 		if(draw) group.push( paper.path(svgLine(x0+width/2, y_body_base, x0+width/2, y_body_base + row_height)).attr({"stroke-width":"1"}) );
 	}
@@ -3433,6 +3492,7 @@ function render_measure_row(x, paper, macros,
 		if(elements.body.length > 0) groupedBodyElems.push(jQuery.extend(true,{},tmpl));
 		var gbei = 0;
 
+		// Grouping the chord and notes among which the same balken is shared.
 		elements.body.forEach(function(e, ei){
 
 			// TODO : More strict judge
@@ -3507,6 +3567,12 @@ function render_measure_row(x, paper, macros,
 					chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
 
 					if(draw) rs_area_svg_groups.push(rr.group);
+				}else if(e0 instanceof Simile){
+					// Simile makr shall be always in the sigle group solely. Simile mark in body element if one or more body elements exist.
+					var sgroup = paper.set();
+					var swidth = render_simile_mark(draw, paper, sgroup, x, y_body_or_rs_base, param.rs_area_height, e0.numslash, false, 'l');
+					if(draw) rs_area_svg_groups.push(sgroup);
+					chord_symbol_width = (swidth + base_space) * x_global_scale * m.body_scaling;
 				}
 				e0.renderprop.x = x;
 				x += chord_symbol_width;
@@ -3537,6 +3603,8 @@ function render_measure_row(x, paper, macros,
 					if(!draw) rr.group.remove();
 					else rs_area_svg_groups.push(rr.group);
 
+				}else if(e instanceof Simile){
+					// Do nothing as already drawn
 				}else{
 					throw "Unkown instance of body elements";
 				}
@@ -3573,7 +3641,7 @@ function render_measure_row(x, paper, macros,
 				x = r.x;
 				if(r.group) rs_area_svg_groups.push(r.group);
 			}else if(e instanceof DaCapo){
-				text = raphaelText(paper, x, y_body_or_rs_base　- 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
+				text = raphaelText(paper, x, y_body_or_rs_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
 				if(rs_area_detected) x += text.getBBox().width;
 				rs_area_svg_groups.push(text);
 			}else if(e instanceof DalSegno){
@@ -3647,6 +3715,13 @@ function render_measure_row(x, paper, macros,
 				if(draw) rs_area_svg_groups.push(lriGroup);
 
 				rest_or_long_rests_detected |= true;
+			}else if(e instanceof Simile){
+				// Simile mark in measure wide element if there is no other body elements in this measure
+				var sx = meas_start_x + m.header_width - param.header_body_margin; // More beautiful for long rest if header body margin is omitted
+				var fx = meas_end_x - m.footer_width;
+				var sgroup = paper.set();
+				var swidth = render_simile_mark(draw, paper, sgroup, (sx+fx)/2, y_body_or_rs_base, param.rs_area_height, e.numslash, false, 'c');
+				if(draw) rs_area_svg_groups.push(sgroup);
 			}else{
 				throw "Unkown measure wide instance detected";
 			}

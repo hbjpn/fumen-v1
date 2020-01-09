@@ -257,8 +257,7 @@ function shallowcopy(obj)
 
 function deepcopy(obj)
 {
-	//return jQuery.extend(true, {}, obj);
-	return JSON.parse(JSON.stringify(obj));
+	return jQuery.extend(true, {}, obj);
 }
 
 //
@@ -1602,7 +1601,7 @@ Parser.prototype.parse = function(s)
 	{
 		var rg = track.reharsal_groups[i];
 		if(rg.name in rgmap){
-			track.reharsal_groups[i] = deepcopy(rgmap[rg.name]); // Deep Copy
+			track.reharsal_groups[i] = $.extend(true, {}, rgmap[rg.name]); // Deep Copy
 		}else{
 			rgmap[rg.name] = rg;
 		}
@@ -1979,8 +1978,6 @@ Renderer.prototype.render = function(track, async_mode, progress_cb)
 		render_impl(this.canvas, track, false, this.param, async_mode, progress_cb, this.context);
 	}
 };
-
-
 
 function classifyElements(measure)
 {
@@ -2463,15 +2460,44 @@ var ChordRenderBuffer = {
 
 };
 
-function chord_elem_classify(chord, transpose, half_type)
+function render_chord(chord, transpose, half_type, paper, x, y_body_base,
+		param, draw, C7_width, theme)
 {
+	var row_height = param.row_height;
+
+	//chord.renderprop.x = x;
+
+	if(!chord.is_valid_chord)
+	{
+		return render_chord_as_string(chord, transpose, half_type, paper, x, y_body_base,
+				param, draw);
+	}
+
+	var ref_p = [x, y_body_base];
+
+	if(draw && chord.chord_name_str in ChordRenderBuffer)
+	{
+		var cl =  ChordRenderBuffer[chord.chord_name_str];
+		var group = cl[0].clone();
+		group.attr({opacity:1.0}); // Buffered symbol is transparent.
+		var ref_p_0 = cl[1];
+		group.transform("T " + (ref_p[0]-ref_p_0[0]) + " " + (ref_p[1]-ref_p_0[1]));
+		//x += group.getBBox().width * x_global_scale * body_scaling;
+		//x += (chord_space*body_scaling);
+		//if(!isFinite(x)){
+		//	console.error("Illegal calculation of x detected");
+		//}
+		return {group:group, width:group.getBBox().width};
+	}
+
 	var bases = chord.getChordStrBase(transpose, half_type);
 	var elems = chord.mid_elem_objs;
+	var group = paper.set();
 
 	// if bases are null, elems are null, then it is just a duration information
 	if ( bases[0] == null && bases[1] == null && elems === undefined ){
 		//x += (C7_width * x_global_scale * body_scaling + chord_space * body_scaling);
-		return 	{ bases : bases};
+		return {group:group, width:C7_width};
 	}
 
 	var _3rdelem = [];
@@ -2507,74 +2533,16 @@ function chord_elem_classify(chord, transpose, half_type)
 			case 'alt': _alteredelem.push(e); break;
 			}
 		}
-	}
 
-	return {
-		bases : bases,
-		_3rdelem : _3rdelem,
-		_5thelem : _5thelem,
-		_6791113suselem : _6791113suselem,
-		_alteredelem : _alteredelem,
-		_6_and_9_exists : (_6exists && _9exists)
-	}
-}
-
-function render_chord(chord, transpose, half_type, paper, x, y_body_base,
-		param, draw, C7_width, theme)
-{
-	var row_height = param.row_height;
-
-	//chord.renderprop.x = x;
-
-	if(!chord.is_valid_chord)
-	{
-		return render_chord_as_string(chord, transpose, half_type, paper, x, y_body_base,
-				param, draw);
-	}
-
-	var ref_p = [x, y_body_base];
-
-	if(draw && chord.chord_name_str in ChordRenderBuffer)
-	{
-		var cl =  ChordRenderBuffer[chord.chord_name_str];
-		var group = cl[0].clone();
-		group.attr({opacity:1.0}); // Buffered symbol is transparent.
-		var ref_p_0 = cl[1];
-		group.transform("T " + (ref_p[0]-ref_p_0[0]) + " " + (ref_p[1]-ref_p_0[1]));
-		//x += group.getBBox().width * x_global_scale * body_scaling;
-		//x += (chord_space*body_scaling);
-		//if(!isFinite(x)){
-		//	console.error("Illegal calculation of x detected");
-		//}
-		return {group:group, width:group.getBBox().width};
-	}
-
-	var elems = chord.mid_elem_objs;
-
-	var ce = chord_elem_classify(chord, transpose, half_type);
-	var bases = ce.bases;
-
-	var group = paper.set();
-
-	// if bases are null, elems are null, then it is just a duration information
-	if ( bases[0] == null && bases[1] == null && elems === undefined ){
-		//x += (C7_width * x_global_scale * body_scaling + chord_space * body_scaling);
-		return {group:group, width:C7_width};
-	}
-
-	var _3rdelem = ce._3rdelem;
-	var _5thelem = ce._5thelem;
-	var _6791113suselem = ce._6791113suselem;
-	var _alteredelem = ce._alteredelem; // #11, #9, b9, #13, b13,
-
-	// Exception for 69 chord
-	if(ce._6_and_9_exists){
-		// 6th will be moved to 5th left upper position
-		for(var i = 0; i < _6791113suselem.length; ++i){
-			if(_6791113suselem[i].type == 'dig' && _6791113suselem[i].param == '6'){
-				_5thelem.push(_6791113suselem[i]);
-				_6791113suselem.splice(i,1);
-				break;
+		// Exception for 69 chord
+		if(_6exists && _9exists){
+			// 6th will be moved to 5th left upper position
+			for(var i = 0; i < _6791113suselem.length; ++i){
+				if(_6791113suselem[i].type == 'dig' && _6791113suselem[i].param == '6'){
+					_5thelem.push(_6791113suselem[i]);
+					_6791113suselem.splice(i,1);
+					break;
+				}
 			}
 		}
 	}
@@ -3521,7 +3489,7 @@ function render_measure_row(x, paper, macros,
 		var tmpl = {elems:[],groupedChordsLen:0};
 		var groupedBodyElems = [];
 
-		if(elements.body.length > 0) groupedBodyElems.push(deepcopy(tmpl));
+		if(elements.body.length > 0) groupedBodyElems.push(jQuery.extend(true,{},tmpl));
 		var gbei = 0;
 
 		// Grouping the chord and notes among which the same balken is shared.
@@ -3540,7 +3508,7 @@ function render_measure_row(x, paper, macros,
 				 (e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str)))){
 					 // Keep in the same group
 			}else{ // flush
-				groupedBodyElems.push(deepcopy(tmpl));
+				groupedBodyElems.push(jQuery.extend(true,{},tmpl));
 				++gbei;
 			}
 
@@ -3880,7 +3848,7 @@ function getGlobalMacros(track)
 // If rehearsal group macro is defined it is adopted.
 function getMacros(global_macros, rg)
 {
-	var macros_to_apply = deepcopy(global_macros); // Deep copy
+	var macros_to_apply = $.extend(true, {}, global_macros); // Deep copy
 
 	if( "XSCALE" in rg.macros ){
 		macros_to_apply.x_global_scale = parseFloat(rg.macros["XSCALE"]);
@@ -4242,928 +4210,6 @@ function draw_coda(paper, x, y, align, coda)
 	return group;
 }
 
-// Simplifed renderer
-Renderer.prototype.render_simplified = function(track, async_mode, progress_cb)
-{
-	this.track = track;
-
-	if(async_mode){
-		alert("Not supported");
-	}else{
-		render_impl_simplified(this.canvas, track, true, this.param, async_mode, progress_cb, this.context);
-	}
-};
-
-
-function render_measure_row_simplified(x, paper, macros,
-		row_elements_list, reharsal_group, prev_measure, next_measure, y_base, param, draw,
-		first_block_first_row, inner_reharsal_mark, music_context)
-{
-	var x_global_scale = macros.x_global_scale;
-	var transpose = macros.transpose;
-	var half_type = macros.half_type;
-	var staff = macros.staff;
-	var theme = macros.theme;
-
-	/* Reference reserved width for empty measures or chord symbol without base names*/
-	var C7_width = 20;
-
-	var rs_area_detected = false; // Rhthm Slash Area
-	var mu_area_detected = false; // Measure Upper Area ( Above the chord symbol )
-	var ml_area_detected = false; // Measure Lower Area ( Blow the chord & rhythm slash area)
-	var lyric_rows = 0;
-
-	//var draw_5line = false;
-	if(staff == "ON"){
-		rs_area_detected = true;
-	}
-	// interval of 5 lines
-	var _5lines_intv = param.rs_area_height / (5-1);
-
-	// Screening of y-axis areas
-	for(var ml = 0; ml < row_elements_list.length; ++ml){
-		var m = row_elements_list[ml];
-		for(var ei = 0; ei < m.elements.length; ++ei)
-		{
-			var e = m.elements[ei];
-			if(e instanceof Coda || e instanceof Segno || e instanceof Comment || e instanceof LoopIndicator || e instanceof ToCoda){
-				mu_area_detected = true;
-			}else if(e instanceof Chord){
-				rs_area_detected |= (e.nglist !== null);
-			}else if( e instanceof Lyric){
-				ml_area_detected = true;
-				lyric_rows = Math.max(e.lyric.split("/").length, lyric_rows);
-			}
-		}
-	}
-	if(staff == "OFF"){
-		rs_area_detected = false;
-	}
-
-	var y_mu_area_base = y_base; // top of mu area(segno, coda, etc..)
-	var y_body_base = y_base + (mu_area_detected ? param.mu_area_height+param.below_mu_area_margin : 0); // top of chord area
-
-	var y_rs_area_base = y_body_base +
-		+ param.row_height
-		+ (rs_area_detected ? param.above_rs_area_margin * macros.r_above_rs_area_margin : 0 ); // top of rs area, note that this is same as y_body_base if rs are a is not drawn. Currenly rs height shoudl be equal to row height
-
-	var y_ml_area_base = y_rs_area_base
-		+ (rs_area_detected ? param.rs_area_height : 0 )
-		+ (ml_area_detected ? param.above_ml_area_margin : 0 );
-
-	var y_next_base = y_ml_area_base
-		+ (ml_area_detected ? lyric_rows * param.ml_row_height : 0 )
-		+ param.row_margin * macros.r_row_margin;
-
-	var y_body_or_rs_base = rs_area_detected ? y_rs_area_base : y_body_base;
-
-	var measure_height = y_next_base - y_base;
-	var measure_heights = [];
-
-	var first_meas_start_x = x;
-	var last_meas_end_x = x;
-
-	var body_area_svg_groups = [];
-	var rs_area_svg_groups = [];
-
-	// For each measure in this row
-	for(var ml = 0; ml < row_elements_list.length; ++ml){
-
-		// measure object
-		var m = row_elements_list[ml];
-
-		var meas_base_x = x;   // Start of this measure including boundary
-		var meas_start_x = x;  // Start of this measure excluding boundary
-		var meas_end_x = x;    // End of this measure
-		var mh_offset = 0; // Offset x in mh region
-
-		var elements = classifyElements(m);
-
-		// Draw sub header field ( Repeat signs )
-		var m_mu_area_detected = false;
-		var m_ml_area_detected = false;
-		var rest_or_long_rests_detected = false;
-
-		for(var ei = 0; ei < elements.header.length; ++ei)
-		{
-			var e = elements.header[ei];
-			if(e instanceof Coda){
-				m_mu_area_detected = true;
-				if(draw){
-					var g = draw_coda(paper, meas_base_x + mh_offset, y_mu_area_base, "lt", e);
-					mh_offset += g.getBBox().width;
-				}
-			}else if(e instanceof Segno){
-				m_mu_area_detected = true;
-				if(draw){
-					var g = draw_segno(paper, meas_base_x + mh_offset, y_mu_area_base, e);
-					mh_offset += g.getBBox().width;
-				}
-			}else if(e instanceof Comment){
-				m_mu_area_detected = true;
-				if(draw){
-					// If this comment is associated with a chord with exceptional comment, not rendered here.
-					if (!e.chorddep){
-						var g = raphaelText(paper, meas_base_x + mh_offset, y_body_base, e.comment, 15, "lb");
-						mh_offset += g.getBBox().width;
-					}
-				}
-			}else if(e instanceof Lyric){
-				m_ml_area_detected = true;
-				if(draw){
-					// If this comment is associated with a chord with exceptional comment, not rendered here.
-					if (!e.chorddep){
-						// Currently lyrics are only rendered for chord dependency case
-					}
-				}
-			}
-		} // Header loop
-
-		// Draw header
-		var header_rs_area_width = 0;
-		var header_body_area_width = 0;
-		// Clef, Key, Begin Boundary, Time(1st one) are included in this area
-		for(var ei = 0; ei < elements.header.length; ++ei)
-		{
-			var e = elements.header[ei];
-			if(e instanceof MeasureBoundary)
-			{
-				var pm = ml == 0 ? prev_measure : row_elements_list[ml-1];
-				var ne = pm ? pm.elements[ pm.elements.length - 1] : null;
-				var r = draw_boundary_simplified('begin', ne, e, m.new_line, paper, x, y_body_or_rs_base, param, draw);
-				m.renderprop.y = y_body_or_rs_base;
-				m.renderprop.sx = x;
-				m.renderprop.paper = paper;
-				x = r.x;
-				meas_start_x = r.bx;
-
-				if(r.group) rs_area_svg_groups.push(r.group);
-
-				// Header 1. Reharsal mark in row
-				if(inner_reharsal_mark && rs_area_detected && first_block_first_row && ml == 0){
-					var g = CanvasTextWithBox(paper, meas_base_x, y_body_base, reharsal_group.name, param.reharsal_mark_font_size);
-					header_body_area_width += g.getBBox().width;
-				}
-			}else if(e instanceof Time){
-				x += 4;
-				var hlw = 0;
-				var lx = x;
-				var timeGroup = paper.set();
-				var textn = CanvasText(paper, lx, y_body_or_rs_base,  e.numer, 12, "lt", "realbook_music_symbol");
-				hlw = textn.getBBox().width;
-				var textd = CanvasText(paper, lx, y_body_or_rs_base + param.row_height/2, e.denom, 12, "lt", "realbook_music_symbol");
-				hlw = Math.max(hlw, textd.getBBox().width);
-				textn.attr({'x':textn.attr('x') + (hlw - textn.getBBox().width)/2});
-				textd.attr({'x':textd.attr('x') + (hlw - textd.getBBox().width)/2});
-				timeGroup.push(textn, textd);
-				var ly = y_body_base + param.row_height/2;
-				if(draw && (!rs_area_detected)) timeGroup.push( paper.path(svgLine(lx, ly, lx+hlw, ly)).attr({"stroke-width":"1"}) );
-				//console.log("hlw = " + hlw);
-				rs_area_svg_groups.push(timeGroup);
-				x += hlw;
-			}
-		}
-
-		header_rs_area_width = x - meas_base_x;
-
-		if(header_body_area_width > header_rs_area_width)
-			x += (header_body_area_width - header_rs_area_width);
-
-		// Margin between header and body
-		x += param.header_body_margin;
-
-		m.header_width = x - meas_base_x;
-
-		// Draw body
-		var body_base = x;
-
-		// First, guess chord duration here.
-		// In current version, each chord in the measure is assumed to have the same duration.
-		// TODO : Improve based on number of spaces or duration indication mark.
-		var all_has_length = true;
-		var sum_length = 0.0;
-
-		var chord_name_str = null;
-
-		var chord_space_list = []; // for chord and rest
-
-		var base_space = 20;
-
-		elements.body.forEach(function(e){
-			all_has_length &= (e.nglist !== null );
-			if(all_has_length) sum_length += e.nglist[0].lengthIndicator.length;
-			rest_or_long_rests_detected |= (e instanceof Rest);
-		});
-
-		// Reset music context
-		// TODO : consider key infomration
-		// TODO : consider tie
-		// C3 -> 0x3C as 0 C-2 as index 0, G8 as 127(0x7F)
-		music_context.accidental_info = new Array(128).fill(0);
-
-		var tmpl = {elems:[],groupedChordsLen:0};
-		var groupedBodyElems = [];
-
-		if(elements.body.length > 0) groupedBodyElems.push(deepcopy(tmpl));
-		var gbei = 0;
-
-		// Grouping the chord and notes among which the same balken is shared.
-		elements.body.forEach(function(e, ei){
-
-			// TODO : More strict judge
-			// Currently, Rest and Chords are in the different groups.
-			// However to cater for, for instance triplets including rests,
-			// they needs to be in the same group.
-			if(groupedBodyElems[gbei].elems.length == 0){
-				// Keei pin the same group
-			}else if(all_has_length && e instanceof Chord &&
-				(groupedBodyElems[gbei].elems[0] instanceof Chord) && // Rest and chords will not be in the same group
-				(music_context.tie_info.prev_has_tie ||
-				 e.chord_name_str == "" ||
-				 (e.is_valid_chord && chord_name_str && (chord_name_str == e.chord_name_str)))){
-					 // Keep in the same group
-			}else{ // flush
-				groupedBodyElems.push(deepcopy(tmpl));
-				++gbei;
-			}
-
-			groupedBodyElems[gbei].elems.push(e);
-
-			music_context.tie_info.prev_has_tie = ( e.nglist ? e.nglist[0].lengthIndicator.has_tie : false );
-
-			if(e instanceof Chord)
-				chord_name_str = e.chord_name_str;
-
-		});
-
-		// reset pos inside a measure
-		music_context.pos_in_a_measure = 0;
-
-		groupedBodyElems.forEach(function(body_elems, gbei){
-
-			// Draw Rythm Slashes, first
-			if(rs_area_detected && all_has_length){
-
-				var g = render_rs_area(
-						x, body_elems.elems, paper,
-						y_rs_area_base,
-						_5lines_intv,
-						meas_start_x, meas_end_x,
-						draw, 0, m.body_scaling, x_global_scale, music_context, m, param);
-
-				if(g.group) rs_area_svg_groups.push(g.group);
-
-				var rs_area_width = g.x - x;
-
-				var e0 = body_elems.elems[0];
-				var chord_symbol_width = 0;
-				if(e0 instanceof Chord){
-					var cr = render_chord_simplified(e0, transpose, half_type, paper, e0.renderprop.x, y_body_base,
-							param, C7_width);
-					chord_symbol_width = (cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
-				}else if(e0 instanceof Rest){
-					// Rest is drawn in render_rs_area function in RS area
-				}
-
-				x += Math.max(rs_area_width, chord_symbol_width);
-			}else{
-
-				if(body_elems.elems.length != 1)
-					throw "SOMETHING WRONG WITH CHORD GROUPING";
-
-				var e0 = body_elems.elems[0];
-				var chord_symbol_width = 0;
-				if(e0 instanceof Chord){
-					var cr = render_chord_simplified(e0, transpose, half_type, paper, x, y_body_base,
-							param, C7_width);
-					chord_symbol_width = 40; // TODO//(cr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
-				}else if(e0 instanceof Rest){
-					var rr = render_rest(e0, paper, draw, x, y_body_or_rs_base, 0, _5lines_intv, param);
-					chord_symbol_width = (rr.width + base_space) * x_global_scale * m.body_scaling; // + chord_space * m.body_scaling;
-
-					if(draw) rs_area_svg_groups.push(rr.group);
-				}else if(e0 instanceof Simile){
-					// Simile makr shall be always in the sigle group solely. Simile mark in body element if one or more body elements exist.
-					var sgroup = paper.set();
-					var swidth = render_simile_mark(draw, paper, sgroup, x, y_body_or_rs_base, param.rs_area_height, e0.numslash, false, 'l');
-					if(draw) rs_area_svg_groups.push(sgroup);
-					chord_symbol_width = (swidth + base_space) * x_global_scale * m.body_scaling;
-				}
-				e0.renderprop.x = x;
-				x += chord_symbol_width;
-			}
-
-			body_elems.elems.forEach(function(e, ei){
-
-				if(e instanceof Chord){
-
-					if(e.exceptinal_comment !== null){
-						if(draw)
-							var g = raphaelText(paper, e.renderprop.x, y_body_base,
-								e.exceptinal_comment.comment, 15, "lb");
-					}
-					if(e.lyric !== null){
-						if(draw){
-							var llist = e.lyric.lyric.split("/");
-							for(var li=0; li < llist.length; ++li){
-								var g = raphaelText(paper, e.renderprop.x, y_ml_area_base + li*param.ml_row_height,
-									llist[li], 10, "lt");
-							}
-						}
-					}
-				}else if(e instanceof Rest){
-					if(ei == 0) return; // skip as already drawn
-
-					var rr = render_rest(e0, paper, draw, e.renderprop.x, y_body_or_rs_base, C7_width, _5lines_intv, param);
-					if(!draw) rr.group.remove();
-					else rs_area_svg_groups.push(rr.group);
-
-				}else if(e instanceof Simile){
-					// Do nothing as already drawn
-				}else{
-					throw "Unkown instance of body elements";
-				}
-			});
-		});
-
-		if(elements.body.length == 0)
-		{
-			// If no elements in body area, minimum width is reservied assuming 1 CM7 chord is located.
-			x += C7_width * x_global_scale * m.body_scaling;
-			x += (base_space * x_global_scale*m.body_scaling);
-		}
-
-		//console.log({x:x, body_base:body_base, scaling:m.body_scaling});
-		m.body_width = x - body_base;
-
-		// Draw footer
-		var footer_base = x;
-		for(var ei = 0; ei < elements.footer.length; ++ei)
-		{
-			// Basically, end boundary is not drawn for this measure because next measure
-			// will draw it.
-			// End boundary should be drawn only when this measure is the last
-			// measure in current row.
-			var lr = rs_area_detected ? 'l' : 'r';
-
-			var e = elements.footer[ei];
-			if(e instanceof MeasureBoundary)
-			{
-				var nm = (ml == row_elements_list.length-1) ? next_measure : row_elements_list[ml+1];
-				var ne = nm ? nm.elements[0] : null;
-				var r = draw_boundary_simplified('end', e, ne, nm ? nm.new_line : false, paper, x, y_body_or_rs_base, param, draw);
-				m.renderprop.ex = x;
-				x = r.x;
-				if(r.group) rs_area_svg_groups.push(r.group);
-			}else if(e instanceof DaCapo){
-				text = raphaelText(paper, x, y_body_or_rs_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
-				if(rs_area_detected) x += text.getBBox().width;
-				rs_area_svg_groups.push(text);
-			}else if(e instanceof DalSegno){
-				text = raphaelText(paper, x, y_body_or_rs_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
-				if(rs_area_detected) x += text.getBBox().width;
-				rs_area_svg_groups.push(text);
-			}else if(e instanceof ToCoda){
-				if(rs_area_detected){
-					var text = raphaelText(paper, x, y_body_or_rs_base, "To", 15, "lb").attr(param.repeat_mark_font);
-					x += (text.getBBox().width + 5);
-					rs_area_svg_groups.push(text);
-					var coda = draw_coda(paper, x, y_body_or_rs_base, "lb", e);
-					x += coda.getBBox().width;
-					rs_area_svg_groups.push(coda);
-				}else{
-					var coda = draw_coda(paper, x, y_body_or_rs_base, "rb", e);
-					text = raphaelText(paper, x - coda.getBBox().width - 5, y_body_or_rs_base, "To", 15, "rb").attr(param.repeat_mark_font);
-					rs_area_svg_groups.push(coda);
-					rs_area_svg_groups.push(text);
-				}
-			}else if(e instanceof Fine){
-				text = raphaelText(paper, x, y_body_or_rs_base - 8 /* + row_height + 8*/, e.toString(), 15, lr+"c").attr(param.repeat_mark_font);
-				if(rs_area_detected) x += text.getBBox().width;
-				rs_area_svg_groups.push(text);
-			}else{
-				throw "Unkown instance of footer elements";
-			}
-		}
-
-		m.footer_width = x - footer_base;
-		meas_end_x = x;
-		last_meas_end_x = meas_end_x;
-
-		// Draw Upper and Lower Signs
-		for(var ei = 0; ei < elements.measure_wide.length; ++ei)
-		{
-			var e = elements.measure_wide[ei];
-			if(e instanceof LoopIndicator){
-				var oy = 10;
-				var ly = y_body_base - 2 - oy;
-				var sx = meas_start_x;
-				var fx = meas_end_x;
-				if(draw) paper.path(svgLine(sx, ly, sx, ly + oy)).attr({"stroke-width":"1"});
-				if(draw) paper.path(svgLine(sx, ly, fx, ly)).attr({"stroke-width":"1"});
-				var s = e.indicators.join(",");
-				if(draw) raphaelText(paper, sx + 2, ly, s, 10, "lt");
-			}else if(e instanceof LongRestIndicator){
-				var sx = meas_start_x + m.header_width - param.header_body_margin; // More beautiful for long rest if header body margin is omitted
-				var fx = meas_end_x - m.footer_width;
-				var rh = param.row_height;
-				var r_lrmargin = 0.05;
-				var min_lrmargin = 5;
-				var max_lrmargin = 20;
-				var vlmargin = 0.2;
-
-				lrmargin = Math.max( min_lrmargin, Math.min(max_lrmargin, (sx+fx) * r_lrmargin) );
-
-				var lx = sx + lrmargin;
-				var rx = fx - lrmargin;
-
-				var lriGroup = paper.set();
-
-				if(draw) lriGroup.push( paper.path(svgLine(lx, y_body_or_rs_base + param.row_height/2,
-						rx, y_body_or_rs_base + param.row_height/2)).attr({"stroke-width":"7"}) );
-				if(draw) lriGroup.push( paper.path(svgLine(lx, y_body_or_rs_base + rh * vlmargin,
-						lx, y_body_or_rs_base + rh - rh * vlmargin)).attr({"stroke-width":"1"}) );
-				if(draw) lriGroup.push( paper.path(svgLine(rx, y_body_or_rs_base + rh * vlmargin,
-						rx, y_body_or_rs_base + rh - rh * vlmargin)).attr({"stroke-width":"1"}) );
-				if(draw) lriGroup.push( raphaelText(paper, (sx+fx)/2, y_body_or_rs_base, e.longrestlen, 14, "cm","realbook_music_symbol") );
-
-				if(draw) rs_area_svg_groups.push(lriGroup);
-
-				rest_or_long_rests_detected |= true;
-			}else if(e instanceof Simile){
-				// Simile mark in measure wide element if there is no other body elements in this measure
-				var sx = meas_start_x + m.header_width - param.header_body_margin; // More beautiful for long rest if header body margin is omitted
-				var fx = meas_end_x - m.footer_width;
-				var sgroup = paper.set();
-				var swidth = render_simile_mark(draw, paper, sgroup, (sx+fx)/2, y_body_or_rs_base, param.rs_area_height, e.numslash, false, 'c');
-				if(draw) rs_area_svg_groups.push(sgroup);
-			}else{
-				throw "Unkown measure wide instance detected";
-			}
-		}
-
-		m.renderprop.meas_height = measure_height;
-		measure_heights.push(measure_height);
-
-		m.renderprop.meas_start_x = meas_start_x;
-		m.renderprop.meas_end_x = meas_end_x;
-
-	} // measure loop
-
-	// Draw 5 lines
-	if(rs_area_detected){
-		for(var i = 0; i < 5; ++i){
-			var intv = _5lines_intv;
-			var dy = 0;
-			if(draw){
-				var _5l = paper.path( svgLine([[first_meas_start_x, y_rs_area_base + i*intv + dy],[last_meas_end_x, y_rs_area_base + i*intv + dy]]) ).attr({'stroke-width':'1px'});
-				rs_area_svg_groups.push(_5l);
-			}
-		}
-	}
-
-	// check vertical overlaps
-	if(false){
-		var rs_min_y = 100000;
-		var rs_max_y = 0;
-		rs_area_svg_groups.forEach(function(g){
-			rs_min_y = Math.min( g.getBBox().y, rs_min_y );
-			rs_max_y = Math.max( g.getBBox().y2, rs_max_y );
-		});
-		if(rs_min_y < y_rs_area_base){
-			rs_area_svg_groups.forEach(function(g){
-				g.transform("t"+0 +","+(y_rs_area_base - rs_min_y));
-			});
-		}
-	}
-
-	// max.apply with 0 length array will generate -inf value, then check if measure_heights has at least one element
-	if( measure_heights.length > 0 )
-		y_base += Math.max.apply(null, measure_heights);
-
-	return {y_base:y_base};
-}
-
-
-function render_impl_simplified(canvas, track, just_to_estimate_size, param, async_mode, progress_cb, context)
-{
-	var origin = {x:0,y:0};
-
-	var y_title_offset = param.y_title_offset;
-	var x_offset = origin.x + param.x_offset;
-	var score_width = param.paper_width/param.ncol;
-	var score_height = param.paper_height/param.nrow
-	var width = param.paper_width/param.ncol - param.x_offset * 2;
-
-	var y_base = param.y_first_page_offset;
-
-	var songname = "";
-
-	var global_macros = getGlobalMacros(track);
-	
-	// We do not use Raphael in simplifed renderer
-	var paper = canvas;
-	
-	// Title
-	CanvasText(paper, x_offset + width/2, y_title_offset, global_macros.title, 24, "ct");
-	songname = global_macros.title;
-
-	// Sub Title
-	if(global_macros.sub_title != "")
-		CanvasText(paper, x_offset + width/2, y_title_offset + 28, global_macros.sub_title, 14, "ct");
-
-	// Artist
-	CanvasText(paper, x_offset + width, param.y_author_offset, global_macros.artist, 14, "rt");
-	songname += ("/"+global_macros.artist);
-
-	// Music context
-	var music_context = {
-		accidental_info : {},
-		key_info : {},
-		time_info : {},
-		tie_info : {
-			rs_prev_coord : null,
-			rs_prev_meas : null,
-			rs_prev_has_tie : false,
-			rs_prev_tie_paper : null,
-			prev_has_tie : false
-		},
-		pos_in_a_measure : 0
-	};
-
-	var y_stacks = [{type:'titles',height:param.y_first_page_offset}];
-	for(var i = 0; i < track.reharsal_groups.length; ++i)
-	{
-		var rg_macros = getMacros(global_macros, track.reharsal_groups[i]);
-		console.group("Macro for " + track.reharsal_groups[i].name);
-		console.log(rg_macros);
-		console.groupEnd();
-		if(global_macros.reharsal_mark_position != "Inner")
-			y_stacks.push({type:'reharsal',height:param.rm_area_height,cont:track.reharsal_groups[i],macros:rg_macros});
-		var rg = track.reharsal_groups[i];
-		for(var bi = 0; bi < rg.blocks.length; ++bi){
-			var block_measures = rg.blocks[bi];
-			var row_max_height = 0;
-			var meas_row = [];
-			var pm = null;
-			var row_id_in_block = 0;
-			for(var ml = 0; ml < block_measures.length; ++ml){
-				var m = block_measures[ml];
-				if(m.new_line){
-					y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
-						nm:m,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros,
-						block_id:bi,row_id_in_block:row_id_in_block});
-					row_max_height = 0;
-					meas_row = [];
-					pm = ml>0?block_measures[ml-1]:null;
-					row_id_in_block += 1;
-				}
-				meas_row.push(m);
-			}
-			if(meas_row.length > 0)
-				y_stacks.push({type:'meas', height:row_max_height,cont:meas_row,
-					nm:null,pm:pm,rg:track.reharsal_groups[i],macros:rg_macros,
-					block_id:bi,row_id_in_block:row_id_in_block});
-		}
-	}
-
-	// Single page for pagelist
-	var pageslist = [y_stacks];
-
-	for(var pageidx = 0; pageidx < pageslist.length; ++pageidx){
-
-		var yse = pageslist[pageidx];
-		for(var pei = 0; pei < yse.length; ++pei){ // Loop each y_stacks
-			if(yse[pei].type == 'titles'){
-
-			}else if(yse[pei].type == 'reharsal' && yse[pei].macros.reharsal_mark_position != "Inner"){
-				var rg = yse[pei].cont;
-
-				var g = CanvasTextWithBox(paper, x_offset, y_base, rg.name, param.reharsal_mark_font_size);
-
-				y_base += param.rm_area_height; // Reharsal mark area height
-			}else if(yse[pei].type == 'meas'){
-				var row_elements_list = yse[pei].cont;
-				var r = render_measure_row_simplified(
-						x_offset,
-						paper, yse[pei].macros, row_elements_list,
-						yse[pei].rg, yse[pei].pm, yse[pei].nm,
-						y_base, param, true,
-						(yse[pei].block_id==0 && yse[pei].row_id_in_block==0),
-						yse[pei].macros.reharsal_mark_position == "Inner", music_context);
-				y_base = r.y_base;
-			}
-		}
-		// Page number footer
-		footerstr = (songname + " - " + (pageidx+1) + " of " + (pageslist.length));
-		//alert(footerstr);
-		CanvasText(paper, origin.x + score_width/2,
-				origin.y + score_height - 60, footerstr, 12, "ct");
-
-	} // reharsal group loop
-
-}
-
-function CanvasRect(canvas, x, y, w, h)
-{
-	var context = canvas.getContext('2d');
-    context.beginPath();
-    context.rect(x,y,w,h);
-    context.stroke();
-}
-
-function CanvasCircle(canvas, x, y, r)
-{
-	var context = canvas.getContext('2d');
-	context.beginPath();
-	context.arc(x, y, r, 0, Math.PI*2, false);
-	context.fill();
-}
-
-function CanvasLine(canvas, x0, y0, x1, y1, dash)
-{
-	var context = canvas.getContext('2d');
-    context.beginPath();
-    if(dash)
-	    context.setLineDash([2, 2]);
-    context.moveTo(x0,y0);
-    context.lineTo(x1,y1);
-    context.stroke();
-}
-
-
-function CanvasText(canvas, x, y, text, fsize, align)
-{
-	var context = canvas.getContext('2d');
-	var ta = {
-		"l":"left",
-		"c":"center",
-		"r":"right"
-	};
-	var tb = {
-		"t":"top",
-		"m":"middle",
-		"b":"bottom"
-	}
-	var orgfont = context.font;
-	bold=""; //"bold ";
-	fontfamily="Arial"; 
-    context.font = bold+fsize+"px '"+fontfamily+"'";
-    context.textAlign = ta[align[0]];
-    context.textBaseline = tb[align[1]];
-    context.fillText(text, x, y);
-    
-    context.font = orgfont;
-}
-
-function CanvasTextWithBox(canvas, x, y, text, fsize)
-{
-	CanvasText(canvas, x, y, text, fsize, "lt");
-	CanvasRect(canvas, x, y, fsize, fsize);
-}
-
-function render_chord_simplified(chord, transpose, half_type, canvas, x, y_body_base,
-	param, C7_width)
-{
-	var ce = chord_elem_classify(chord, transpose, half_type);
-	var bases = ce.bases;
-	// if bases are null, elems are null, then it is just a duration information
-	if ( bases[0] == null && bases[1] == null && elems === undefined ){
-		return null;
-	}
-
-	var _3rdelem = ce._3rdelem;
-	var _5thelem = ce._5thelem;
-	var _6791113suselem = ce._6791113suselem;
-	var _alteredelem = ce._alteredelem; // #11, #9, b9, #13, b13,
-
-	var rightbottom = "";
-	var _5 = "";
-	var _tensions = "";
-	_3rdelem.forEach(function(e){
-		rightbottom += e.type;
-	})
-	_6791113suselem.forEach(function(e){
-		rightbottom += e.type=="dig"?e.param:"";
-	})
-	_5thelem.forEach(function(e){
-		_5 += (e.type=="b"?"-5":"+5");
-	})
-	_alteredelem.forEach(function(e){
-		_tensions += (e.type+e.param);
-	})
-
-	var context = canvas.getContext("2d");
-	RenderChord(context, 40, x, y_body_base, bases[0], rightbottom, _5, _tensions, bases[1]);
-
-	console.log(ce);
-}
-
-function RenderChord(context, B, x, y, root, rightbottom, _5, tensions, onbass)
-{
-	bold="bold ";
-	//fontfamily="Courier"; 
-	fontfamily="Arial"; 
-    context.font = bold+B+"px '"+fontfamily+"'";
-    context.textAlign = "left";
-    context.textBaseline = "top";
-    
-    var coeff1=0.6;
-    var coeff2=1.0; // start of 2nd box
-    
-    if(root.length==1){
-	    context.fillText(root[0], x, y, B*0.60);//, box[0]);
-	}else{
-		// length = -2
-	    context.fillText(root[0], x, y, B*0.60);//, box[0]);
-	    context.font =  bold+B*0.6+"px '"+ fontfamily +"'";
-	    if(root[1]=="b"){
-		    context.fillText(String.fromCharCode(0x266D), x+(B*0.5), y-(B*0.1));
-		}else{
-		    context.fillText(String.fromCharCode(0x266F), x+(B*0.65), y-(B*0.1));
-		}
-		context.font =  bold+B+"px '"+fontfamily+"'";
-	}
-    
-    // Interpret halfdim
-    if(rightbottom=="m7" && _5 == "-5"){
-    	_5 = null;
-    	_791113_6 = null;
-    	rightbottom="halfdim";
-    }
-    
-    if(rightbottom=="M"){
-    	// Do not render. Note that M7 is in M9 etc are in _791113_6.
-    }else if(rightbottom=="M7"){
-    	context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText(String.fromCharCode(0x0394)+"7", x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="m"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("m", x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="m7"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("m7", x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="mM7"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("m"+String.fromCharCode(0x0394)+"7", x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="dim"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText(String.fromCharCode(0x004F), x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="dim7"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText(String.fromCharCode(0x004F)+"7", x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="halfdim"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText(String.fromCharCode(0x00D8), x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="7sus4"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("7sus4", x+(B*coeff1), y+(B*0.5),B*1.0);
-	}else if(rightbottom=="add9"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("add9", x+(B*coeff1), y+(B*0.5));
-	}else if(rightbottom=="13"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("13", x+(B*coeff1), y+(B*0.5), B*0.4);
-	}else if(rightbottom=="69"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("69", x+(B*coeff1), y+(B*0.5), B*0.4);
-	}else if(rightbottom !== null){
-	    context.fillText(rightbottom, x+(B*coeff1), y);//, box[0]);
-	}
-    context.font =  bold+B+"px '"+fontfamily+"'";
-	
-	if(_5 == "+5"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("aug", x+(B*coeff1), y+(B*0.5), B*0.5);
-	}else if(_5 == "-5"){
-	    context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("-5", x+(B*coeff1), y, B*0.5);
-	}
-	
-	if(onbass !== null){
-		context.font =  bold+B/2+"px '"+ fontfamily +"'";
-	    context.fillText("/"+onbass, x+B*0.0, y+B*0.8);//, box[0]);
-	}
-	
-	if(tensions){
-		context.font =  bold+B/2+"px '"+ fontfamily +"'";
-		if(tensions[0]=="b"){
-		    context.fillText(String.fromCharCode(0x266D)+tensions.substr(1), x+(B*coeff2), y);
-		}else if(tensions[0]=="#"){
-		    context.fillText(String.fromCharCode(0x266F)+tensions.substr(1), x+(B*coeff2), y);
-		}else{
-		    context.fillText(tensions, x+B*coeff2, y);
-		}
-	}
-	
-	context.font =  bold+B+"px '"+fontfamily+"'";
-
-}
-
-/**
- * Draw boundary
- * @param side : 'begin' or 'end' of boundary for current measure
- * @param ec : Boundary element of current measure( <side> side )
- * @param en : Boundary element of neighbor measure.
- *             <en> must be 'begin' boundary of the next measure when <side> is 'end'
- *             <en> must be 'end' boundary of the previous measure when <side> is 'begin'
- *             <en> can be null if there is no next measure when <side> is 'end'.
- *             <en> can be null if there is no previous measure when <side> is 'begin'.
- * @param hasNewLine : Whether there is "new line" at the place of the target boundary.
- * @param paper : Paper object
- * @param x : Current x position
- * @param darw : Whether to draw or just estimating sizes
- *
- * @return dictionary with following keys and values
- *             x : updated x position.
- */
-function draw_boundary_simplified(side, e0, e1, hasNewLine, canvas, x, y_body_base, param, draw)
-{
-	var row_height = param.row_height;
-
-	var draw_type = null; // "s, d, lb, le, lb, f"
-
-
-	var bx = x; // Actual boundary of measure. Depends on final drawn boundary type.
-
-	if(side == 'end'){
-		var thisIsLastMeasureInLine = (e1 === null) || ( hasNewLine );
-		
-		// If this is not the last measure in this line, then does not draw the boundary. Draw in the "begin" side of next measure.
-		if(!thisIsLastMeasureInLine) return {group:null, x:x, bx:bx};
-	}
-
-	if(hasNewLine === null || hasNewLine == false){
-		draw_type = boundary_type_without_line_break(e0, e1);
-	}else{
-		draw_type = boundary_type_with_line_break(e0, e1, side);
-	}
-	switch(draw_type){
-	case 's':
-	case 'd':
-		var nline = draw_type == 's' ? 1 : 2;
-		for(var li = 0; li < nline; ++li){
-			CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-			if(nline >= 2 && li < nline-1) x += 3;
-		}
-		bx = x;
-		break;
-	case 'b':
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		x += 3;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		x += 4;
-		CanvasCircle(canvas, x, y_body_base + row_height/4*1.5, 1);
-		CanvasCircle(canvas, x, y_body_base + row_height/4*2.5, 1);
-		break;
-	case 'e':
-		CanvasCircle(canvas, x, y_body_base + row_height/4*1.5, 1);
-		CanvasCircle(canvas, x, y_body_base + row_height/4*2.5, 1);
-		x += 4;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		x += 3;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		//x += 20;
-		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
-			stimes = e0.ntimes == true ? "X" : ""+e0.times;
-			CanvasText(canvas, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc");
-		}
-		bx = x;
-		break;
-	case 'B':
-		CanvasCircle(canvas, x, y_body_base + row_height/4*1.5, 1);
-		CanvasCircle(canvas, x, y_body_base + row_height/4*2.5, 1);
-		x += 4;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		x += 3;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		bx = x;
-		x += 3;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-
-		//x += 20;
-		if(e0.times !== null && (e0.ntimes || e0.times != 2)){
-			stimes = e0.ntimes == true ? "X" : ""+e0.times;
-			CanvasText(canvs, x, y_body_base + row_height + 8, "(" + stimes +" times)", 13, "rc");
-		}
-		x += 4;
-		CanvasCircle(canvas, x, y_body_base + row_height/4*1.5, 1);
-		CanvasCircle(canvas, x, y_body_base + row_height/4*2.5, 1);
-		break;
-	case 'f':
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		x += 3;
-		CanvasLine(canvas, x, y_body_base, x, y_body_base + row_height);
-		break;
-	case 'r':
-		var width = render_simile_mark(draw, paper, group, x, y_body_base, row_height, 2, true, 'l');
-		x += width;
-		break;
-	default:
-		throw "Internal error";
-	}
-	return {x:x, bx:bx};
-}
 
 return {
 	Parser: Parser,
